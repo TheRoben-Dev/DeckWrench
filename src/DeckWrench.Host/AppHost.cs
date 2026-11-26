@@ -1,3 +1,4 @@
+using DeckWrench.Core.Storage;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using DeckWrench.Core;
@@ -69,6 +70,9 @@ public sealed class AppHost
     public PendingChanges Pending { get; }
     public PrefixBackups Backups { get; }
     public GameNotes Notes { get; }
+
+    /// <summary>Folder sizes remembered between scans; "Scan again" forgets them.</summary>
+    public SizeCache Sizes { get; }
     public Actions Actions { get; }
 
     private readonly ToolboxScanner _scanner;
@@ -90,14 +94,18 @@ public sealed class AppHost
         Pending = new PendingChanges(Path.Combine(Paths.Config, "pending.json"));
         Notes = new GameNotes(Path.Combine(Paths.Config, "notes.json"));
         Backups = new PrefixBackups(Path.Combine(Paths.Data, "backups", "prefixes"));
-        _scanner = new ToolboxScanner(Paths, Pending, Backups);
+        Sizes = new SizeCache(Path.Combine(Paths.Cache, "sizes.json"));
+        _scanner = new ToolboxScanner(Paths, Pending, Backups, Sizes);
         Actions = new Actions(this);
     }
 
     /// <summary>Scans everything (Steam, Heroic, Lutris, sizes). Safe off the main thread.</summary>
     public ToolboxState Scan(IProgress<double>? progress = null, CancellationToken ct = default)
     {
+        var started = DateTime.UtcNow;
         var state = _scanner.Scan(progress, ct);
+        AppLog.Info($"scan: {(DateTime.UtcNow - started).TotalMilliseconds:0} ms, folder sizes {Sizes.Hits} remembered, {Sizes.Misses} measured");
+        Sizes.Save();
         State = state;
         StateChanged?.Invoke();
         return state;

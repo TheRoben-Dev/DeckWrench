@@ -3,6 +3,10 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.6.0
+
+- Faster rescans: folder sizes are remembered between scans, and only folders whose contents changed are measured again. Rescans after an action and at start use them; "Scan again" still measures everything.
+
 ## 0.5.0
 
 - Notes: add your own note to any game (what fixed it, which Proton works). It shows first on the game's page and is kept in notes.json in the config folder.

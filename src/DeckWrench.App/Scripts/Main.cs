@@ -313,12 +313,20 @@ public partial class Main : Control
 
     // ---- scanning ----
 
-    /// <summary>Scans Steam, Heroic and Lutris again in the background, then refreshes the shell.</summary>
+    /// <summary>
+    /// Scans Steam, Heroic and Lutris again in the background, then refreshes the shell. A quiet
+    /// rescan (after an action, at start) reuses remembered folder sizes; one the player asked
+    /// for measures every folder again.
+    /// </summary>
     public async void Rescan(bool quiet = false)
     {
         if (Host == null || Scanning)
         {
             return;
+        }
+        if (!quiet)
+        {
+            Host.Sizes.Forget();
         }
         Scanning = true;
         Shell?.StateChanged();

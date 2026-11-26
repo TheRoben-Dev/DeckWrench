@@ -17,12 +17,14 @@ public sealed class ToolboxScanner
     private readonly AppPaths _paths;
     private readonly PendingChanges _pending;
     private readonly PrefixBackups _backups;
+    private readonly SizeCache _sizes;
 
-    public ToolboxScanner(AppPaths paths, PendingChanges pending, PrefixBackups backups)
+    public ToolboxScanner(AppPaths paths, PendingChanges pending, PrefixBackups backups, SizeCache? sizes = null)
     {
         _paths = paths;
         _pending = pending;
         _backups = backups;
+        _sizes = sizes ?? new SizeCache(null);
     }
 
     /// <summary>Steam's own tools: they show under Proton, not as games.</summary>
@@ -80,12 +82,12 @@ public sealed class ToolboxScanner
         }
 
         var tools = root != null ? CompatToolScanner.Scan(root, libraries) : [];
-        tools = tools.Select(t => t with { Size = DiskSize.Of(t.Dir, ct) }).ToList();
+        tools = tools.Select(t => t with { Size = _sizes.Of(t.Dir, ct) }).ToList();
         progress?.Report(0.3);
 
-        var prefixes = Platform.IsWindows ? [] : AppFolders.Scan(AppFolderKind.Prefix, libraries, owners, shortcutIds, measure: true, ct);
+        var prefixes = Platform.IsWindows ? [] : AppFolders.Scan(AppFolderKind.Prefix, libraries, owners, shortcutIds, measure: true, ct, _sizes.Of);
         progress?.Report(0.6);
-        var shaders = AppFolders.Scan(AppFolderKind.ShaderCache, libraries, owners, shortcutIds, measure: true, ct);
+        var shaders = AppFolders.Scan(AppFolderKind.ShaderCache, libraries, owners, shortcutIds, measure: true, ct, _sizes.Of);
         progress?.Report(0.75);
 
         var config = root != null ? new SteamConfig(root) : null;
@@ -131,10 +133,10 @@ public sealed class ToolboxScanner
                     Library = Path.GetDirectoryName(dir)!,
                     Owner = g.Title,
                     External = true,
-                    Size = DiskSize.Of(dir, ct),
+                    Size = _sizes.Of(dir, ct),
                 };
             }
-            var size = g.SizeOnDisk > 0 ? g.SizeOnDisk : DiskSize.Of(g.InstallDir, ct);
+            var size = g.SizeOnDisk > 0 ? g.SizeOnDisk : _sizes.Of(g.InstallDir, ct);
             games.Add(new GameEntry
             {
                 Install = g,
