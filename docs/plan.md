@@ -28,6 +28,6 @@ screenshots, Linux and Windows exports).
 ## Phase 3: extras
 
 - ~~protontricks verbs beyond the curated list; custom verb lists in the config folder.~~ Done in 0.3.0.
-- Per-game notes on known fixes (from ProtonDB-style data the user adds).
+- ~~Per-game notes on known fixes (from ProtonDB-style data the user adds).~~ Done in 0.5.0, with a ProtonDB link.
 - Shader cache pre-caching controls.
 - ~~A "free X GB on the SD card" planner.~~ Done in 0.4.0.

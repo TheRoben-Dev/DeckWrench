@@ -116,6 +116,20 @@ public partial class SmokeTest : Node
             Check(TricksLog().Contains($"{Elden} -q d3dx9_43 win7"), $"protontricks got '{TricksLog()}'");
             (Focusable("Back to where you were") as BaseButton)?.EmitSignal(BaseButton.SignalName.Pressed);
         }, wait: 1.2);
+        // Your own note on a game: typed, saved to notes.json and shown first on the page.
+        Step("notes", () =>
+        {
+            ActionButton(ActionId.EditNotes)?.GrabFocus();
+            Tap(JoyButton.A);
+        }, wait: 1.2, expect: "A or a tap opens");
+        Step("notes-save", () => Check(TypeAndSubmit("GE-Proton9-20 fixes the cutscenes"), "no text field"), wait: 2.5);
+        Step("notes-shown", () =>
+        {
+            Check(Main.Instance.Host!.Notes.Get("steam:" + Elden) == "GE-Proton9-20 fixes the cutscenes", "the note wasn't saved");
+            Check(ActionButton(ActionId.EditNotes)?.Text.Contains("Edit your notes") == true, "the page didn't pick up the note");
+            Check(ActionButton(ActionId.OpenProtonDb) != null, "no ProtonDB link");
+            ActionButton(ActionId.SetCompatTool)?.GrabFocus();  // back to the top, where the note shows
+        }, expect: "Proton: ");
         Step("game-back", () => Tap(JoyButton.B), expect: "ELDEN RING:", tab: "Games");
         // A non-Steam game added to Steam has the same Proton tools (minus the store page and mover).
         Step("shortcut-page", () =>

@@ -3,6 +3,12 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.5.0
+
+- Notes: add your own note to any game (what fixed it, which Proton works). It shows first on the game's page and is kept in notes.json in the config folder.
+- Steam games get "Reports on ProtonDB", which opens in Steam's browser in Game Mode.
+- Controller mode: pages no longer drift to the left after going back through several pages quickly.
+
 ## 0.4.0
 
 - Storage: "Free space on <drive>" for each drive with a Steam library. It lists what can go from that drive (orphaned caches and prefixes, unused Proton, logs, old backups) and its biggest games with the drive they'd move to, then shows the total and everything it touches before you confirm. Moves only happen while Steam is closed, and never when the other drive would end up with less than 1 GB free.
