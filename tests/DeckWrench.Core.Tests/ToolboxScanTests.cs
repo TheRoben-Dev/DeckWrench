@@ -127,6 +127,7 @@ public class ToolboxScanTests : IDisposable
         Assert.Contains("MSVCP140.dll", report);  // the fake log's error, under Proton logs
         Assert.Contains("~/", report);
         Assert.DoesNotContain(_home, report);
+        Assert.Matches(@"\| ELDEN RING \|.*\| 3 days ago \| 90 h \|", report);  // fake localconfig: 3 days ago, 5432 min
 
         var save = host.Actions.Global().Single(x => x.Id == ActionId.SaveReport);
         var result = await save.Run!(new ActionContext(null, new Progress<double>(), _ => { }, CancellationToken.None));
@@ -303,5 +304,35 @@ public class ToolboxScanTests : IDisposable
         Assert.Equal("proton_9", steam.CompatToolMapping()["1091500"]);
         Assert.Equal("-b", steam.LaunchOptions()["1091500"]);
         Assert.Empty(host.Pending.All);
+    }
+
+    [LinuxFact]
+    public void SteamGamesCarryLastPlayedAndPlaytime()
+    {
+        var host = Host();
+        var elden = host.State.Games.Single(g => g.AppId == "1245620");
+        Assert.Equal(5432, elden.PlaytimeMinutes);
+        Assert.Equal("Last played 3 days ago · 90 h in total", PlayStats.Describe(elden, DateTime.UtcNow));
+        var cp = host.State.Games.Single(g => g.AppId == "1091500");
+        Assert.Equal("Last played a year ago · 1.6 h in total", PlayStats.Describe(cp, DateTime.UtcNow));
+        var never = host.State.Games.First(g => g.IsSteam && g.AppId is not "1245620" and not "1091500");
+        Assert.Equal("Never played", PlayStats.Describe(never, DateTime.UtcNow));
+    }
+
+    [Theory]
+    [InlineData(0, "today")]
+    [InlineData(1, "yesterday")]
+    [InlineData(45, "45 days ago")]
+    [InlineData(200, "6 months ago")]
+    [InlineData(400, "a year ago")]
+    [InlineData(800, "2 years ago")]
+    public void LastPlayedWording(int daysAgo, string expected)
+    {
+        var now = new DateTime(2026, 11, 26, 12, 0, 0, DateTimeKind.Utc);
+        Assert.Equal(expected, PlayStats.Ago(now.AddDays(-daysAgo).AddMinutes(-5), now));
+        Assert.Equal("never", PlayStats.Ago(null, now));
+        Assert.Equal("", PlayStats.Hours(0));
+        Assert.Equal("45 min", PlayStats.Hours(45));
+        Assert.Equal("120 h", PlayStats.Hours(7200));
     }
 }

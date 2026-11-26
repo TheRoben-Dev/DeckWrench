@@ -3,6 +3,11 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.11.0
+
+- Games and Storage show when each Steam game was last played and how many hours it has (from Steam's own records), with a sortable "Played" column in desktop mode. Sort by it to find big games you haven't touched in months.
+- The free-space planner and the saved report mention last played and hours too.
+
 ## 0.10.0
 
 - Cleanup finds Steam's leftovers of games that aren't installed any more: unfinished downloads (steamapps/downloading), update scratch (steamapps/temp) and Workshop items (steamapps/workshop/content). Folders of installed games are never listed.

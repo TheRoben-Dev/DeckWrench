@@ -12,7 +12,7 @@ public sealed class GamesSection : Section
 {
     public override string Name => "Games";
     public override string Summary => "Every installed game: its Proton, prefix, shader cache, launch options and log.";
-    public override IReadOnlyList<string> Columns => ["Game", "Proton", "Launch options", "Drive", "Size", "Prefix", "Shaders"];
+    public override IReadOnlyList<string> Columns => ["Game", "Proton", "Launch options", "Drive", "Size", "Prefix", "Shaders", "Played"];
     public override string EmptyText => "No games found. DeckWrench looks in every Steam library (SD card too), Heroic and Lutris.";
 
     public override string Banner
@@ -50,6 +50,7 @@ public sealed class GamesSection : Section
             Cell.Size(g.Size),
             g.Prefix != null ? Cell.Size(g.Prefix.Size) : new Cell("", -1L),
             g.ShaderCache != null ? Cell.Size(g.ShaderCache.Size) : new Cell("", -1L),
+            g.IsSteam ? new Cell(PlayStats.Ago(g.LastPlayed, DateTime.UtcNow), g.LastPlayed?.Ticks ?? 0L, g.LastPlayed == null ? Tone.Dim : Tone.Normal) : new Cell("", -1L),
         ],
         Item = g,
     }).ToList();
@@ -80,6 +81,10 @@ public sealed class GamesSection : Section
             new("Drive", g.Drive != null ? $"{g.Drive.Label} · {DiskSize.Format(g.Drive.Free)} free" : "?"),
             new("Size", DiskSize.Format(g.Size)),
         });
+        if (g.IsSteam)
+        {
+            facts.Add(new("Played", PlayStats.Describe(g, DateTime.UtcNow), g.LastPlayed == null ? Tone.Dim : Tone.Normal));
+        }
         if (g.RunsInSteam)
         {
             facts.Add(new("Proton", S.ToolLabel(g.EffectiveCompatTool), g.EffectiveCompatTool != null && S.Tool(g.EffectiveCompatTool) == null ? Tone.Warn : Tone.Accent));
@@ -337,7 +342,7 @@ public sealed class StorageSection : Section
 {
     public override string Name => "Storage";
     public override string Summary => "What takes space on each drive, moving games between drives, and cleanup.";
-    public override IReadOnlyList<string> Columns => ["Game", "Drive", "Game size", "Prefix", "Shaders", "Total"];
+    public override IReadOnlyList<string> Columns => ["Game", "Drive", "Game size", "Prefix", "Shaders", "Total", "Played"];
     public override (int Column, bool Descending) DefaultSort => (5, true);
     public override string EmptyText => "No Steam libraries found.";
 
@@ -362,6 +367,7 @@ public sealed class StorageSection : Section
             g.Prefix != null ? Cell.Size(g.Prefix.Size) : new Cell("", -1L),
             g.ShaderCache != null ? Cell.Size(g.ShaderCache.Size) : new Cell("", -1L),
             Cell.Size(Total(g)),
+            g.IsSteam ? new Cell(PlayStats.Ago(g.LastPlayed, DateTime.UtcNow), g.LastPlayed?.Ticks ?? 0L, g.LastPlayed == null ? Tone.Dim : Tone.Normal) : new Cell("", -1L),
         ],
         Item = g,
     }).ToList();
@@ -377,6 +383,7 @@ public sealed class StorageSection : Section
             new("Prefix", g.Prefix != null ? DiskSize.Format(g.Prefix.Size) : "None", g.Prefix != null ? Tone.Normal : Tone.Dim),
             new("Shader cache", g.ShaderCache != null ? DiskSize.Format(g.ShaderCache.Size) : "None", g.ShaderCache != null ? Tone.Normal : Tone.Dim),
             new("Total", DiskSize.Format(Total(g)), Tone.Accent),
+            .. (g.IsSteam ? new Fact[] { new("Played", PlayStats.Describe(g, DateTime.UtcNow), g.LastPlayed == null ? Tone.Dim : Tone.Normal) } : []),
         ];
     }
 

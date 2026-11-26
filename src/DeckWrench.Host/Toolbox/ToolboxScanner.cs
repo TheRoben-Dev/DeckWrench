@@ -92,6 +92,7 @@ public sealed class ToolboxScanner
 
         var config = root != null ? new SteamConfig(root) : null;
         var mapping = config?.CompatToolMapping() ?? [];
+        var played = root != null ? SteamScanner.PlayStatsByApp(root) : [];
         var logs = Platform.IsWindows ? [] : ProtonLogs.Scan(LogDirs(installs), owners);
         var pending = _pending.All;
         var mounts = Platform.IsWindows ? null : Drives.Mounts();
@@ -147,6 +148,8 @@ public sealed class ToolboxScanner
                 Log = g.Source == GameSource.Steam ? logs.FirstOrDefault(l => l.AppId == g.SourceId)
                     : g.Source == GameSource.SteamShortcut ? logs.FirstOrDefault(l => l.AppId == g.SourceId || l.AppId == ShortcutGames.GameId(g.SourceId)) : null,
                 Size = size,
+                LastPlayed = g.Source == GameSource.Steam && played.TryGetValue(g.SourceId, out var pl) ? pl.LastPlayed : null,
+                PlaytimeMinutes = g.Source == GameSource.Steam && played.TryGetValue(g.SourceId, out var pm) ? pm.Minutes : 0,
                 Drive = DriveOf(g.InstallDir),
                 Pending = inSteam ? pending.Where(p => p.AppId == g.SourceId).ToList() : [],
             });

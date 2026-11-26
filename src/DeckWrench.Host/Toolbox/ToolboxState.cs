@@ -42,6 +42,12 @@ public sealed record GameEntry
     /// <summary>Install size (from Steam's manifest, or measured).</summary>
     public long Size { get; init; }
 
+    /// <summary>When Steam last ran it (from the account's localconfig), if ever.</summary>
+    public DateTime? LastPlayed { get; init; }
+
+    /// <summary>Total time played in minutes, as Steam counts it.</summary>
+    public int PlaytimeMinutes { get; init; }
+
     /// <summary>The drive the game is installed on.</summary>
     public Drive? Drive { get; init; }
 

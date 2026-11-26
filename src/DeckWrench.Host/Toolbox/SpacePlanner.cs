@@ -86,7 +86,7 @@ public static class SpacePlanner
             {
                 Id = "move:" + g.AppId,
                 Label = $"{g.Title} · {DiskSize.Format(size)}",
-                Detail = $"Moves the game, prefix and shader cache to {libraryLabel(best.Library)} ({DiskSize.Format(best.Drive.Free)} free there).",
+                Detail = $"Moves the game, prefix and shader cache to {libraryLabel(best.Library)} ({DiskSize.Format(best.Drive.Free)} free there). {PlayStats.Describe(g, DateTime.UtcNow)}.",
                 Group = MoveGroup,
                 Frees = size,
                 Game = g,

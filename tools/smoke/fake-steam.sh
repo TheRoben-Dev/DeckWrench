@@ -155,10 +155,14 @@ cat > "$STEAM/userdata/12345678/config/localconfig.vdf" <<VDF
 					"1245620"
 					{
 						"LaunchOptions"		"PROTON_LOG=1 gamemoderun %command%"
+						"LastPlayed"		"$(( $(date +%s) - 3*86400 ))"
+						"Playtime"		"5432"
 					}
 					"1091500"
 					{
 						"LaunchOptions"		"-skipStartScreen"
+						"LastPlayed"		"$(( $(date +%s) - 400*86400 ))"
+						"Playtime"		"95"
 					}
 				}
 			}
