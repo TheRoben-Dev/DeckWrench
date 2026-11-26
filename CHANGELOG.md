@@ -8,6 +8,7 @@ the in-app "What's new" page.
 - Games and Storage show when each Steam game was last played and how many hours it has (from Steam's own records), with a sortable "Played" column in desktop mode. Sort by it to find big games you haven't touched in months.
 - The free-space planner and the saved report mention last played and hours too.
 - Games: "Play", "Verify game files" and "Uninstall…" for Steam games. Uninstall shows what goes (game, prefix, shader cache), backs the prefix up first, then hands over to Steam's own uninstall dialog. The backup is under Prefixes → Backups for after a reinstall.
+- Prefixes: a "Saves" line names the game's own folders in Documents, Saved Games and AppData, newest first, and "Open saves folder" opens one (Desktop Mode).
 
 ## 0.10.0
 

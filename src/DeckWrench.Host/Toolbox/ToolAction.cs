@@ -36,6 +36,7 @@ public enum ActionId
 
     // Prefixes
     OpenPrefix,
+    OpenSaves,
     BackupPrefix,
     RestorePrefix,
     ResetPrefix,

@@ -366,4 +366,21 @@ public class ToolboxCoreTests : IDisposable
         Assert.False(File.Exists(manifest));
         Assert.False(Directory.Exists(Path.Combine(from, "steamapps", "common", "Hades")));
     }
+
+    [Fact]
+    public void SaveFinderListsGameFoldersInTheProfileNewestFirst()
+    {
+        const string u = "pfx/drive_c/users/steamuser/";
+        Write(u + "Documents/My Games/Skyrim/Saves/quick.ess", "x");
+        Write(u + "AppData/LocalLow/Team Cherry/Hollow Knight/user1.dat", "x");
+        Write(u + "AppData/Local/Microsoft/junk.txt", "x");  // Windows' own: skipped
+        Write(u + "Documents/readme.txt", "x");  // a file, not a game folder
+        Directory.CreateDirectory(Path.Combine(_dir, u, "AppData/Roaming/Empty"));  // empty: skipped
+        var old = DateTime.UtcNow.AddDays(-10);
+        Directory.SetLastWriteTimeUtc(Path.Combine(_dir, u, "Documents/My Games/Skyrim/Saves"), old);  // what's inside counts
+
+        var saves = SaveFinder.Find(Path.Combine(_dir, "pfx"));
+        Assert.Equal(["AppData/LocalLow/Team Cherry", "Documents/My Games/Skyrim"], saves.Select(s => s.Name).ToArray());
+        Assert.Empty(SaveFinder.Find(Path.Combine(_dir, "nothing-here")));
+    }
 }

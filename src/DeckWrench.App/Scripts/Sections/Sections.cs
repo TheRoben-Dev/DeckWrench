@@ -272,6 +272,10 @@ public sealed class PrefixesSection : Section
         {
             facts.Add(new("Last used", p.Modified.ToLocalTime().ToString("g")));
         }
+        var saves = SaveFinder.Find(p.PfxDir);
+        facts.Add(saves.Count == 0
+            ? new("Saves", "No game folders in Documents or AppData (Steam Cloud, or saves next to the game)", Tone.Dim)
+            : new("Saves", string.Join(", ", saves.Take(3).Select(x => x.Name)) + (saves.Count > 3 ? $" and {saves.Count - 3} more" : "")));
         var backups = S.Backups.Count(x => x.AppId == p.AppId);
         facts.Add(new("Backups", backups == 0 ? "None" : backups.ToString(), backups == 0 ? Tone.Dim : Tone.Normal));
         return facts;

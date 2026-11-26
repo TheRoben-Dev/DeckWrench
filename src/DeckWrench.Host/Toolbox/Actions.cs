@@ -580,6 +580,7 @@ public sealed class Actions
         var list = new List<ToolAction>
         {
             OpenFolder(ActionId.OpenPrefix, "Open prefix (drive_c)", Directory.Exists(Path.Combine(p.PfxDir, "drive_c")) ? Path.Combine(p.PfxDir, "drive_c") : p.Dir),
+            OpenSaves(p),
             new()
             {
                 Id = ActionId.BackupPrefix,
@@ -1206,6 +1207,27 @@ public sealed class Actions
     }
 
     // ---- shared ----
+
+    /// <summary>Picks one of the save folders in a prefix and opens it in the file manager.</summary>
+    private static ToolAction OpenSaves(AppFolder p)
+    {
+        var saves = SaveFinder.Find(p.PfxDir);
+        return new ToolAction
+        {
+            Id = ActionId.OpenSaves,
+            Label = saves.Count > 0 ? $"Open saves folder ({saves.Count})" : "Open saves folder",
+            Help = "The game's own folders under Documents, Saved Games and AppData in the prefix, newest first.",
+            Unavailable = saves.Count == 0 ? "No game folders in the prefix's Documents or AppData."
+                : SteamSetup.InGameMode ? "Opens a file manager, which needs Desktop Mode. Newest: " + saves[0].Dir : null,
+            Input = saves.Count > 0 ? new ActionInput
+            {
+                Kind = InputKind.Choice,
+                Prompt = "Open which folder?",
+                Choices = saves.Select(x => new ActionChoice(x.Dir, x.Name, $"changed {x.Modified.ToLocalTime():g}")).ToList(),
+            } : null,
+            Run = ctx => Task.FromResult(new ActionResult(ctx.Input != null && Opener.Open(ctx.Input) ? "Opened" : "Couldn't open a file manager", Rescan: false)),
+        };
+    }
 
     private static ToolAction OpenFolder(ActionId id, string label, string dir) => new()
     {
