@@ -19,7 +19,7 @@ public sealed record PrefixBackup
     /// <summary>Size of the prefix when it was backed up (uncompressed).</summary>
     public long PrefixSize { get; init; }
 
-    /// <summary>Why it was taken: "manual", "before reset", "before delete".</summary>
+    /// <summary>Why it was taken: "manual", "before reset", "before delete", "before uninstall".</summary>
     public string Reason { get; init; } = "manual";
 
     /// <summary>The archive (not serialized; set when listing).</summary>

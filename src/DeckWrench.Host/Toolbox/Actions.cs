@@ -147,6 +147,9 @@ public sealed class Actions
                 Help = "Opens the game's page in Steam.",
                 Run = _ => Task.FromResult(new ActionResult(Opener.Open($"steam://nav/games/details/{g.AppId}") ? "Opened in Steam" : "Couldn't open Steam", Rescan: false)),
             });
+            list.Add(SteamLink(ActionId.PlayGame, "Play", "Starts the game through Steam, with its Proton and launch options.", $"steam://rungameid/{g.AppId}", "Starting in Steam"));
+            list.Add(SteamLink(ActionId.VerifyGameFiles, "Verify game files", "Steam checks every file of the game and downloads the broken or missing ones. Your prefix, saves and launch options are kept.", $"steam://validate/{g.AppId}", "Steam is verifying the files"));
+            list.Add(UninstallGame(g));
         }
         list.Add(OpenFolder(ActionId.OpenInstallFolder, "Open install folder", g.Install.InstallDir));
         list.Add(EditNotes(g));
@@ -156,6 +159,60 @@ public sealed class Actions
         }
         return list;
     }
+
+    private static ToolAction SteamLink(ActionId id, string label, string help, string url, string done) => new()
+    {
+        Id = id,
+        Label = label,
+        Help = help,
+        Run = _ => Task.FromResult(new ActionResult(Opener.Open(url) ? done : "Couldn't open Steam", Rescan: false)),
+    };
+
+    /// <summary>Hands the uninstall to Steam (it asks once more), after backing up the prefix Steam deletes with the game.</summary>
+    private ToolAction UninstallGame(GameEntry g) => new()
+    {
+        Id = ActionId.UninstallGame,
+        Label = "Uninstall…",
+        Destructive = true,
+        Help = "Backs up the game's prefix (saves of games without Steam Cloud live there), then asks Steam to uninstall the game.",
+        Plan = (_, ct) =>
+        {
+            var contents = new List<(string, long)> { (g.Install.InstallDir, g.Size) };
+            var paths = new List<string> { g.Install.InstallDir };
+            if (g.Prefix is { } p)
+            {
+                contents.Add(("Proton prefix " + p.Dir, Math.Max(0, p.Size)));
+                paths.Add(p.Dir);
+            }
+            if (g.ShaderCache is { } c)
+            {
+                contents.Add(("Shader cache " + c.Dir, Math.Max(0, c.Size)));
+                paths.Add(c.Dir);
+            }
+            return new ConfirmPlan
+            {
+                Title = $"Uninstall {g.Title}?",
+                Verb = g.Prefix != null ? "Back up prefix and uninstall" : "Uninstall",
+                Contents = contents,
+                TotalSize = contents.Sum(x => x.Item2),
+                Backup = g.Prefix != null ? $"The prefix is saved to {_host.Backups.Dir} first; Prefixes → Backups puts it back after a reinstall." : null,
+                Caution = "Steam shows its own uninstall dialog next and does the removal. Games with Steam Cloud keep their cloud saves.",
+                Paths = paths,
+            };
+        },
+        Run = ctx =>
+        {
+            var note = "";
+            if (g.Prefix is { } p && Directory.Exists(p.Dir))
+            {
+                var b = _host.Backups.Create(p, "before uninstall", new Progress<double>(v => ctx.Progress.Report(v * 0.95)), ctx.Ct);
+                AppLog.Info($"backed up {p.Dir} before uninstall ({b.Archive})");
+                note = $"Prefix backed up ({DiskSize.Format(b.ArchiveSize)}). ";
+            }
+            var opened = Opener.Open($"steam://uninstall/{g.AppId}");
+            return Task.FromResult(new ActionResult(note + (opened ? "Confirm the uninstall in Steam." : "Couldn't open Steam: uninstall it from the game's page in Steam.")));
+        },
+    };
 
     private ToolAction SetCompatTool(GameEntry g)
     {

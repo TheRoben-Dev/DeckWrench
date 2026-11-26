@@ -335,4 +335,25 @@ public class ToolboxScanTests : IDisposable
         Assert.Equal("45 min", PlayStats.Hours(45));
         Assert.Equal("120 h", PlayStats.Hours(7200));
     }
+
+    [LinuxFact]
+    public async Task UninstallBacksUpThePrefixAndHandsOverToSteam()
+    {
+        var host = Host();
+        var elden = host.State.Games.Single(g => g.AppId == "1245620");
+        var actions = host.Actions.ForGame(elden);
+        Assert.Contains(actions, a => a.Id == ActionId.PlayGame);
+        Assert.Contains(actions, a => a.Id == ActionId.VerifyGameFiles);
+        var uninstall = actions.Single(a => a.Id == ActionId.UninstallGame);
+        Assert.True(uninstall.Destructive);
+        var plan = uninstall.Plan!(null, CancellationToken.None);
+        Assert.Equal(3, plan.Contents.Count);  // game, prefix, shader cache
+        Assert.Contains(plan.Contents, c => c.Name.StartsWith("Proton prefix"));
+        Assert.NotNull(plan.Backup);
+
+        await uninstall.Run!(new ActionContext(null, new Progress<double>(), _ => { }, CancellationToken.None));
+        var backup = Assert.Single(host.Backups.List("1245620"));
+        Assert.Equal("before uninstall", backup.Reason);
+        Assert.True(Directory.Exists(elden.Prefix!.Dir));  // Steam does the removal, not us
+    }
 }
