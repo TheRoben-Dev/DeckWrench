@@ -112,6 +112,7 @@ public sealed class Actions
             list.Add(SetCompatTool(g));
             list.Add(LaunchPresets(g));
             list.Add(EditLaunchOptions(g));
+            list.Add(CopyLaunchOptions(g));
             list.Add(ToggleProtonLog(g));
         }
         if (g.Prefix != null)
@@ -198,6 +199,30 @@ public sealed class Actions
         Input = new ActionInput { Kind = InputKind.Text, Prompt = $"Launch options for {g.Title}", Initial = g.EffectiveLaunchOptions },
         Run = ctx => Task.FromResult(SetLaunchOptions(g, (ctx.Input ?? "").Trim())),
     };
+
+    private ToolAction CopyLaunchOptions(GameEntry g)
+    {
+        var sources = S.Games.Where(o => o.RunsInSteam && o.Key != g.Key && o.EffectiveLaunchOptions.Length > 0)
+            .OrderBy(o => o.Title, StringComparer.OrdinalIgnoreCase).ToList();
+        return new ToolAction
+        {
+            Id = ActionId.CopyLaunchOptions,
+            Label = "Copy launch options from another game",
+            Help = "Uses another game's launch options for this one (they replace this game's: " + (g.EffectiveLaunchOptions.Length > 0 ? g.EffectiveLaunchOptions : "none") + ").",
+            Unavailable = S.SteamRoot == null ? "Steam isn't installed." : sources.Count == 0 ? "No other game has launch options." : null,
+            Input = new ActionInput
+            {
+                Kind = InputKind.Choice,
+                Prompt = $"Copy launch options to {g.Title} from",
+                Choices = sources.Select(o => new ActionChoice(o.Key, o.Title, o.EffectiveLaunchOptions)).ToList(),
+            },
+            Run = ctx =>
+            {
+                var from = sources.FirstOrDefault(o => o.Key == ctx.Input) ?? throw new InvalidOperationException("That game isn't there any more.");
+                return Task.FromResult(SetLaunchOptions(g, from.EffectiveLaunchOptions));
+            },
+        };
+    }
 
     private ToolAction LaunchPresets(GameEntry g)
     {
@@ -438,8 +463,54 @@ public sealed class Actions
                 return Task.FromResult(new ActionResult($"Removed {t.DisplayName}"));
             },
         });
+        list.Insert(0, UseToolForGames(t, users));
         list.Add(OpenFolder(ActionId.OpenToolFolder, "Open folder", t.Dir));
         return list;
+    }
+
+    /// <summary>Several games at once: tick the games that should use this tool; unticking one sets it back to Steam's default.</summary>
+    private ToolAction UseToolForGames(CompatTool t, IReadOnlyList<GameEntry> users)
+    {
+        var games = S.Games.Where(g => g.RunsInSteam).OrderBy(g => g.Title, StringComparer.OrdinalIgnoreCase).ToList();
+        bool Uses(GameEntry g) => string.Equals(g.EffectiveCompatTool, t.Name, StringComparison.OrdinalIgnoreCase);
+        return new ToolAction
+        {
+            Id = ActionId.UseToolForGames,
+            Label = users.Count > 0 ? $"Use for games ({users.Count} now)" : "Use for games",
+            Help = $"Tick every game that should run with {t.DisplayName}. Unticking a game that uses it sets that game back to Steam's default.",
+            Unavailable = Platform.IsWindows ? NotOnWindows : S.SteamRoot == null ? "Steam isn't installed." : games.Count == 0 ? "No Steam games." : null,
+            Input = new ActionInput
+            {
+                Kind = InputKind.MultiChoice,
+                Prompt = $"Games that run with {t.DisplayName}",
+                Choices = games.Select(g => new ActionChoice(g.Key, g.Title, "Now: " + S.ToolLabel(g.EffectiveCompatTool), Uses(g), g.IsShortcut ? "Non-Steam games" : "Steam games")).ToList(),
+            },
+            Run = ctx =>
+            {
+                var ticked = (ctx.Input ?? "").Split('\n', StringSplitOptions.RemoveEmptyEntries).ToHashSet();
+                var changes = games.Where(g => ticked.Contains(g.Key) != Uses(g)).Select(g => new PendingChange
+                {
+                    Kind = PendingKind.CompatTool,
+                    AppId = g.AppId,
+                    Value = ticked.Contains(g.Key) ? t.Name : null,
+                    Title = g.Title,
+                }).ToList();
+                if (changes.Count == 0)
+                {
+                    return Task.FromResult(new ActionResult("Nothing changed", Rescan: false));
+                }
+                ActionResult? last = null;
+                foreach (var c in changes)
+                {
+                    last = WriteSteam(c);
+                    ctx.Log(c.Describe());
+                }
+                var on = changes.Count(c => c.Value != null);
+                var off = changes.Count - on;
+                var what = string.Join(", ", new[] { on > 0 ? $"{on} game{(on == 1 ? "" : "s")} to {t.DisplayName}" : null, off > 0 ? $"{off} back to Steam's default" : null }.Where(x => x != null));
+                return Task.FromResult(new ActionResult(last!.Message == "Saved to Steam" ? $"Set {what}" : $"Set {what}. {last.Message}"));
+            },
+        };
     }
 
     // ---- prefixes ----

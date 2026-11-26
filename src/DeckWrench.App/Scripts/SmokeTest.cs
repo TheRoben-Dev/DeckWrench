@@ -164,7 +164,10 @@ public partial class SmokeTest : Node
         {
             Focusable("GE-Proton8-25:")?.GrabFocus();
             Tap(JoyButton.A);
-        }, wait: 1.2);
+        }, wait: 1.2, expect: "Use for games");
+        // One Proton for several games: the picker ticks the games already on it.
+        Step("proton-use-for-games", () => Tap(JoyButton.A), wait: 1.2, expect: "Apply (0 picked)");
+        Step("proton-use-for-games-back", () => Tap(JoyButton.B), expect: "Use for games");
         Step("proton-tool-back", () => Tap(JoyButton.B), tab: "Proton");
         // Prefixes: the orphan is flagged; its delete shows size and contents.
         Step("prefixes-tab", () => Key(Godot.Key.Key3, ctrl: true), tab: "Prefixes");
@@ -324,6 +327,12 @@ public partial class SmokeTest : Node
         }, wait: 0.8);
         Step("desktop-context-close", () => Key(Godot.Key.Escape), tab: "Games");
         Step("desktop-proton", () => Key(Godot.Key.Key2, ctrl: true), tab: "Proton");
+        Step("desktop-proton-tool", () =>
+        {
+            Check(Desktop.SelectRow("GE-Proton9-20"), "GE-Proton9-20 isn't in the table");
+            ActionButton(ActionId.UseToolForGames)?.EmitSignal(BaseButton.SignalName.Pressed);
+        }, wait: 1.0, tab: "Proton");
+        Step("desktop-proton-tool-cancel", () => Check(PressInWindow("Cancel"), "no games window"), tab: "Proton");
         Step("desktop-prefixes", () => Key(Godot.Key.Key3, ctrl: true), tab: "Prefixes");
         Step("desktop-orphan", () => Check(Desktop.SelectRow("App 271590"), "orphan prefix isn't listed"), tab: "Prefixes");
         Step("desktop-delete-plan", () => ActionButton(ActionId.DeletePrefix)?.EmitSignal(BaseButton.SignalName.Pressed), wait: 1.5);
