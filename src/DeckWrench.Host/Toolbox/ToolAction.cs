@@ -8,6 +8,7 @@ namespace DeckWrench.Host.Toolbox;
 public enum ActionId
 {
     Rescan,
+    SaveReport,
     ApplyPending,
     DiscardPending,
 

@@ -41,6 +41,20 @@ public sealed class Actions
                     return Task.FromResult(new ActionResult("Scanned"));
                 },
             },
+            new()
+            {
+                Id = ActionId.SaveReport,
+                Label = "Save a report",
+                Help = $"Writes your system, drives, Proton versions, every game's Proton, launch options and prefix, recent Proton log errors and what can be cleaned up to a Markdown file in {Path.Combine(_host.Paths.Data, "reports")}, to share when asking for help. Your home folder shows as ~.",
+                ShowsOutput = true,
+                Run = ctx =>
+                {
+                    var file = LibraryReport.Save(S, _host);
+                    ctx.Log(file);
+                    AppLog.Info("report: " + file);
+                    return Task.FromResult(new ActionResult("Report saved: " + file, Rescan: false));
+                },
+            },
         };
         list.AddRange(PendingActions());
         return list;
