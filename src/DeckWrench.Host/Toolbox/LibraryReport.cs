@@ -61,15 +61,15 @@ public static class LibraryReport
 
         L($"## Games ({s.Games.Count})");
         L();
-        L("| Game | Source | Proton | Launch options | Size | Prefix (last Proton) | Shaders | Drive |");
-        L("|---|---|---|---|---:|---|---:|---|");
+        L("| Game | Source | Proton | Launch options | Size | Prefix (last Proton) | Shaders | Drive | Last played | Hours |");
+        L("|---|---|---|---|---:|---|---:|---|---|---:|");
         foreach (var g in s.Games.OrderBy(g => g.Title, StringComparer.OrdinalIgnoreCase))
         {
             var source = g.IsSteam ? $"Steam {g.AppId}" : g.IsShortcut ? "Non-Steam" : g.Install.Source.ToString();
             var proton = g.RunsInSteam ? s.ToolLabel(g.EffectiveCompatTool) : "";
             var launch = g.EffectiveLaunchOptions.Length > 0 ? $"`{Md(g.EffectiveLaunchOptions)}`" : "";
             var prefix = g.Prefix is { } p ? DiskSize.Format(p.Size) + (p.ProtonVersion != null ? $" ({Md(p.ProtonVersion)})" : "") : "";
-            L($"| {Md(g.Title)} | {source} | {Md(proton)} | {launch} | {DiskSize.Format(g.Size)} | {prefix} | {(g.ShaderCache != null ? DiskSize.Format(g.ShaderCache.Size) : "")} | {g.Drive?.Label ?? ""} |");
+            L($"| {Md(g.Title)} | {source} | {Md(proton)} | {launch} | {DiskSize.Format(g.Size)} | {prefix} | {(g.ShaderCache != null ? DiskSize.Format(g.ShaderCache.Size) : "")} | {g.Drive?.Label ?? ""} | {(g.IsSteam ? PlayStats.Ago(g.LastPlayed, (now ?? DateTime.Now).ToUniversalTime()) : "")} | {PlayStats.Hours(g.PlaytimeMinutes)} |");
         }
         L();
 

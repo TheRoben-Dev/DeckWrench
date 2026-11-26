@@ -127,6 +127,7 @@ public class ToolboxScanTests : IDisposable
         Assert.Contains("MSVCP140.dll", report);  // the fake log's error, under Proton logs
         Assert.Contains("~/", report);
         Assert.DoesNotContain(_home, report);
+        Assert.Matches(@"\| ELDEN RING \|.*\| 3 days ago \| 90 h \|", report);  // fake localconfig: 3 days ago, 5432 min
 
         var save = host.Actions.Global().Single(x => x.Id == ActionId.SaveReport);
         var result = await save.Run!(new ActionContext(null, new Progress<double>(), _ => { }, CancellationToken.None));
@@ -303,5 +304,56 @@ public class ToolboxScanTests : IDisposable
         Assert.Equal("proton_9", steam.CompatToolMapping()["1091500"]);
         Assert.Equal("-b", steam.LaunchOptions()["1091500"]);
         Assert.Empty(host.Pending.All);
+    }
+
+    [LinuxFact]
+    public void SteamGamesCarryLastPlayedAndPlaytime()
+    {
+        var host = Host();
+        var elden = host.State.Games.Single(g => g.AppId == "1245620");
+        Assert.Equal(5432, elden.PlaytimeMinutes);
+        Assert.Equal("Last played 3 days ago · 90 h in total", PlayStats.Describe(elden, DateTime.UtcNow));
+        var cp = host.State.Games.Single(g => g.AppId == "1091500");
+        Assert.Equal("Last played a year ago · 1.6 h in total", PlayStats.Describe(cp, DateTime.UtcNow));
+        var never = host.State.Games.First(g => g.IsSteam && g.AppId is not "1245620" and not "1091500");
+        Assert.Equal("Never played", PlayStats.Describe(never, DateTime.UtcNow));
+    }
+
+    [Theory]
+    [InlineData(0, "today")]
+    [InlineData(1, "yesterday")]
+    [InlineData(45, "45 days ago")]
+    [InlineData(200, "6 months ago")]
+    [InlineData(400, "a year ago")]
+    [InlineData(800, "2 years ago")]
+    public void LastPlayedWording(int daysAgo, string expected)
+    {
+        var now = new DateTime(2026, 11, 26, 12, 0, 0, DateTimeKind.Utc);
+        Assert.Equal(expected, PlayStats.Ago(now.AddDays(-daysAgo).AddMinutes(-5), now));
+        Assert.Equal("never", PlayStats.Ago(null, now));
+        Assert.Equal("", PlayStats.Hours(0));
+        Assert.Equal("45 min", PlayStats.Hours(45));
+        Assert.Equal("120 h", PlayStats.Hours(7200));
+    }
+
+    [LinuxFact]
+    public async Task UninstallBacksUpThePrefixAndHandsOverToSteam()
+    {
+        var host = Host();
+        var elden = host.State.Games.Single(g => g.AppId == "1245620");
+        var actions = host.Actions.ForGame(elden);
+        Assert.Contains(actions, a => a.Id == ActionId.PlayGame);
+        Assert.Contains(actions, a => a.Id == ActionId.VerifyGameFiles);
+        var uninstall = actions.Single(a => a.Id == ActionId.UninstallGame);
+        Assert.True(uninstall.Destructive);
+        var plan = uninstall.Plan!(null, CancellationToken.None);
+        Assert.Equal(3, plan.Contents.Count);  // game, prefix, shader cache
+        Assert.Contains(plan.Contents, c => c.Name.StartsWith("Proton prefix"));
+        Assert.NotNull(plan.Backup);
+
+        await uninstall.Run!(new ActionContext(null, new Progress<double>(), _ => { }, CancellationToken.None));
+        var backup = Assert.Single(host.Backups.List("1245620"));
+        Assert.Equal("before uninstall", backup.Reason);
+        Assert.True(Directory.Exists(elden.Prefix!.Dir));  // Steam does the removal, not us
     }
 }

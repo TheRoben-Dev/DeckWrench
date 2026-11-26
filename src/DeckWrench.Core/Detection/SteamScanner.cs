@@ -246,6 +246,36 @@ public sealed class SteamScanner
         return map;
     }
 
+    /// <summary>
+    /// When each app was last played and for how long in total, from the account's localconfig.vdf
+    /// (apps/&lt;id&gt;/LastPlayed as Unix time, Playtime in minutes). Apps never played aren't listed.
+    /// </summary>
+    public static Dictionary<string, (DateTime? LastPlayed, int Minutes)> PlayStatsByApp(string root)
+    {
+        var map = new Dictionary<string, (DateTime?, int)>();
+        if (LocalConfig(root) is not { } file)
+        {
+            return map;
+        }
+        try
+        {
+            var apps = KeyValues.ParseFile(file).Path("UserLocalConfigStore", "Software", "Valve", "Steam", "apps");
+            foreach (var (app, entry) in apps?.Maps() ?? [])
+            {
+                DateTime? last = long.TryParse(entry.Str("LastPlayed"), out var t) && t > 0 ? DateTimeOffset.FromUnixTimeSeconds(t).UtcDateTime : null;
+                var minutes = int.TryParse(entry.Str("Playtime"), out var m) && m > 0 ? m : 0;
+                if (last != null || minutes > 0)
+                {
+                    map[app] = (last, minutes);
+                }
+            }
+        }
+        catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentOutOfRangeException)
+        {
+        }
+        return map;
+    }
+
     /// <summary>The localconfig.vdf of the account used last (newest file), or null.</summary>
     public static string? LocalConfig(string root)
     {

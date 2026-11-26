@@ -32,8 +32,8 @@ prefix() {  # prefix <library> <appid> <proton version> <saves size>
   mkdir -p "$p/pfx/drive_c/windows/system32" "$p/pfx/drive_c/Program Files" "$p/pfx/dosdevices"
   echo "$3" > "$p/version"
   sized "$p/pfx/drive_c/windows/system32/kernel32.dll" 3M
-  sized "$p/pfx/drive_c/users/steamuser/Documents/My Games/save1.sav" "$4"
-  sized "$p/pfx/drive_c/users/steamuser/AppData/Local/settings.ini" 4K
+  sized "$p/pfx/drive_c/users/steamuser/Documents/My Games/$2/save1.sav" "$4"
+  sized "$p/pfx/drive_c/users/steamuser/AppData/Local/GameStudio/settings.ini" 4K
   echo 'WINE REGISTRY Version 2' > "$p/pfx/system.reg"
   ln -sfn ../drive_c "$p/pfx/dosdevices/c:"
   ln -sfn / "$p/pfx/dosdevices/z:"
@@ -155,10 +155,14 @@ cat > "$STEAM/userdata/12345678/config/localconfig.vdf" <<VDF
 					"1245620"
 					{
 						"LaunchOptions"		"PROTON_LOG=1 gamemoderun %command%"
+						"LastPlayed"		"$(( $(date +%s) - 3*86400 ))"
+						"Playtime"		"5432"
 					}
 					"1091500"
 					{
 						"LaunchOptions"		"-skipStartScreen"
+						"LastPlayed"		"$(( $(date +%s) - 400*86400 ))"
+						"Playtime"		"95"
 					}
 				}
 			}

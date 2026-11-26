@@ -20,6 +20,9 @@ public enum ActionId
     ToggleProtonLog,
     MoveGame,
     OpenInSteam,
+    PlayGame,
+    VerifyGameFiles,
+    UninstallGame,
     OpenInstallFolder,
     EditNotes,
     OpenProtonDb,
@@ -33,6 +36,7 @@ public enum ActionId
 
     // Prefixes
     OpenPrefix,
+    OpenSaves,
     BackupPrefix,
     RestorePrefix,
     ResetPrefix,
