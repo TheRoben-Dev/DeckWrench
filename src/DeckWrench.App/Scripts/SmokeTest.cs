@@ -83,6 +83,39 @@ public partial class SmokeTest : Node
         Step("prefix-reset-plan", () => Tap(JoyButton.A), wait: 1.5, expect: "Cancel");
         Step("prefix-reset-cancel", () => Tap(JoyButton.B), wait: 0.8, expect: "Reset prefix");
         Step("prefix-reset-kept", () => Check(Directory.Exists(Main.Instance.Host!.State.Games.First(x => x.AppId == Elden).Prefix!.Dir), "cancel removed the prefix"));
+        // protontricks (a stand-in on PATH): a curated pick plus a verb from the user's tricks.json, then typed verbs.
+        Step("tricks-picker", () =>
+        {
+            ActionButton(ActionId.RunTricks)?.GrabFocus();
+            Tap(JoyButton.A);
+        }, wait: 1.2, expect: "Apply (0 picked)");
+        Step("tricks-pick-user-verb", () =>
+        {
+            Focusable("MFC 4.2:")?.GrabFocus();
+            Tap(JoyButton.A);
+        }, expect: "MFC 4.2:");
+        Step("tricks-run", () => Tap(JoyButton.Y), wait: 2.5, expect: "Close");
+        Step("tricks-ran", () =>
+        {
+            Check(TricksLog().Contains($"{Elden} -q mfc42"), $"protontricks got '{TricksLog()}'");
+            (Focusable("Back to where you were") as BaseButton)?.EmitSignal(BaseButton.SignalName.Pressed);
+        }, wait: 1.2);
+        Step("tricks-typed", () =>
+        {
+            ActionButton(ActionId.RunTypedTricks)?.GrabFocus();
+            Tap(JoyButton.A);
+        }, wait: 1.2, expect: "A or a tap opens");
+        Step("tricks-typed-option-refused", () => Check(TypeAndSubmit("d3dx9_43 --gui"), "no text field"), wait: 1.2, expect: "A or a tap opens");
+        Step("tricks-typed-fixed", () =>
+        {
+            Check(TricksLog().Split('\n', StringSplitOptions.RemoveEmptyEntries).Length == 1, "protontricks ran with an option");
+            Check(TypeAndSubmit("d3dx9_43 win7"), "the text field didn't come back");
+        }, wait: 2.5, expect: "Close");
+        Step("tricks-typed-ran", () =>
+        {
+            Check(TricksLog().Contains($"{Elden} -q d3dx9_43 win7"), $"protontricks got '{TricksLog()}'");
+            (Focusable("Back to where you were") as BaseButton)?.EmitSignal(BaseButton.SignalName.Pressed);
+        }, wait: 1.2);
         Step("game-back", () => Tap(JoyButton.B), expect: "ELDEN RING:", tab: "Games");
         // A non-Steam game added to Steam has the same Proton tools (minus the store page and mover).
         Step("shortcut-page", () =>
@@ -200,6 +233,17 @@ public partial class SmokeTest : Node
             Check(desktop.SequenceEqual(_shortcutActions),
                 $"shortcut actions differ between modes: controller [{string.Join(", ", _shortcutActions)}], desktop [{string.Join(", ", desktop)}]");
         }, tab: "Games");
+        Step("desktop-tricks-typed", () =>
+        {
+            Check(Desktop.SelectRow("ELDEN RING"), "ELDEN RING isn't in the table");
+            ActionButton(ActionId.RunTypedTricks)?.EmitSignal(BaseButton.SignalName.Pressed);
+        }, wait: 1.0, tab: "Games");
+        Step("desktop-tricks-typed-run", () => Check(TypeAndSubmit("corefonts"), "no text window"), wait: 2.5);
+        Step("desktop-tricks-typed-ran", () =>
+        {
+            Check(TricksLog().Contains($"{Elden} -q corefonts"), $"protontricks got '{TricksLog()}'");
+            Check(PressInWindow("Close"), "no output window");
+        }, tab: "Games");
         Step("desktop-sort-size", () =>
         {
             var size = Main.Instance.Host!.State.Games.Count > 0 ? Section.Get("Games").Columns.ToList().IndexOf("Size") : -1;
@@ -282,6 +326,43 @@ public partial class SmokeTest : Node
                 yield return b;
             }
             foreach (var d in AllButtons(c))
+            {
+                yield return d;
+            }
+        }
+    }
+
+    /// <summary>What the stand-in protontricks was run with (one line per run).</summary>
+    private static string TricksLog()
+    {
+        var file = Path.Combine(System.Environment.GetEnvironmentVariable("HOME") ?? "", "protontricks.log");
+        return File.Exists(file) ? File.ReadAllText(file) : "";
+    }
+
+    /// <summary>Types into the visible text field (the topmost window's in desktop mode) and presses Enter.</summary>
+    private bool TypeAndSubmit(string text)
+    {
+        var windows = Windows(GetTree().Root).Where(w => w.Visible && w != GetTree().Root).ToList();
+        var field = LineEdits(windows.Count > 0 ? windows[^1] : GetTree().Root).LastOrDefault(l => l.IsVisibleInTree() && l.Editable);
+        if (field == null)
+        {
+            return false;
+        }
+        field.Text = text;
+        field.EmitSignal(LineEdit.SignalName.TextChanged, text);
+        field.EmitSignal(LineEdit.SignalName.TextSubmitted, text);
+        return true;
+    }
+
+    private static IEnumerable<LineEdit> LineEdits(Node root)
+    {
+        foreach (var c in root.GetChildren())
+        {
+            if (c is LineEdit l)
+            {
+                yield return l;
+            }
+            foreach (var d in LineEdits(c))
             {
                 yield return d;
             }

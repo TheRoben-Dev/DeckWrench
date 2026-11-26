@@ -3,6 +3,11 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.3.0
+
+- Run any other winetricks verb in a game's prefix: type the verbs (Steam's keyboard in Game Mode). Options and anything that isn't a verb are refused before protontricks runs.
+- Your own protontricks verbs from `tricks.json` in the config folder show up under "Your verbs" in the runtime and font picker.
+
 ## 0.2.0
 
 - Non-Steam games you added to Steam (Battle.net, emulators, other launchers) are listed under Games with their Proton version, prefix, shader cache, Proton log and launch options, with the same actions as Steam games (no store page or mover).

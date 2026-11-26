@@ -20,6 +20,19 @@ rm -f "$OUT"/*.png
 # Games on internal and "SD card" libraries, Proton versions, prefixes, shader caches, a log.
 "$ROOT/tools/smoke/fake-steam.sh" "$HOME" "$WORK/sdcard"
 
+# A stand-in protontricks on PATH that records what it was asked to run, and the user's own verbs.
+mkdir -p "$WORK/bin" "$XDG_CONFIG_HOME/deckwrench"
+cat > "$WORK/bin/protontricks" <<'SH'
+#!/bin/sh
+echo "$*" >> "$HOME/protontricks.log"
+for v in "$@"; do echo "Executing w_do_call $v"; done
+SH
+chmod +x "$WORK/bin/protontricks"
+export PATH="$WORK/bin:$PATH"
+cat > "$XDG_CONFIG_HOME/deckwrench/tricks.json" <<'JSON'
+{ "verbs": [ { "id": "mfc42", "label": "MFC 4.2", "help": "Old launchers need it." } ] }
+JSON
+
 if [ -n "${SMOKE_THEME:-}" ]; then  # e.g. SMOKE_THEME=nightgrid for theme screenshots
   mkdir -p "$XDG_CONFIG_HOME/deckwrench"
   printf '{"Theme":"%s"}\n' "$SMOKE_THEME" > "$XDG_CONFIG_HOME/deckwrench/settings.json"

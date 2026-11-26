@@ -33,6 +33,7 @@ public enum ActionId
     ResetPrefix,
     DeletePrefix,
     RunTricks,
+    RunTypedTricks,
     DeleteBackup,
 
     // Shader caches
@@ -77,6 +78,9 @@ public sealed record ActionInput
     public Func<CancellationToken, Task<IReadOnlyList<ActionChoice>>>? LoadChoices { get; init; }
 
     public string Initial { get; init; } = "";
+
+    /// <summary>Checks what was entered: an error keeps the input open (with the text kept), null goes on.</summary>
+    public Func<string?, string?>? Validate { get; init; }
 }
 
 /// <summary>

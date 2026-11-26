@@ -7,6 +7,7 @@ using DeckWrench.Core.Prefixes;
 using DeckWrench.Core.Proton;
 using DeckWrench.Core.Steam;
 using DeckWrench.Core.Storage;
+using DeckWrench.Core.Tricks;
 using Xunit;
 
 namespace DeckWrench.Core.Tests;
@@ -216,7 +217,69 @@ public class ToolboxCoreTests : IDisposable
         Assert.Equal("d3dx9", hints[1].Verb);
         Assert.Equal(LogLevel.Error, ProtonLogs.Classify(lines[0]));
         Assert.Equal(LogLevel.Info, ProtonLogs.Classify(lines[3]));
-        Assert.All(hints.Where(h => h.Verb != null), h => Assert.NotNull(Tricks.TricksCatalog.Find(h.Verb!)));
+        Assert.All(hints.Where(h => h.Verb != null), h => Assert.NotNull(TricksCatalog.Find(h.Verb!)));
+    }
+
+    // ---- winetricks verbs ----
+
+    [Theory]
+    [InlineData("vcrun2022", true)]
+    [InlineData("d3dcompiler_47", true)]
+    [InlineData("renderer=vulkan", true)]
+    [InlineData("-q", false)]
+    [InlineData("--force", false)]
+    [InlineData("VCRUN2022", false)]
+    [InlineData("vcrun;rm", false)]
+    [InlineData("$(id)", false)]
+    [InlineData("a b", false)]
+    [InlineData("", false)]
+    public void VerbsNeverPassOptionsOrShell(string verb, bool ok) => Assert.Equal(ok, TricksCatalog.IsVerb(verb));
+
+    [Fact]
+    public void TypedVerbsAreSplitAndChecked()
+    {
+        var (verbs, error) = TricksCatalog.ParseTyped("  d3dx9_43, win7  d3dx9_43\n");
+        Assert.Null(error);
+        Assert.Equal(["d3dx9_43", "win7"], verbs);
+        Assert.Contains("option", TricksCatalog.ParseTyped("corefonts --force").Error);
+        Assert.NotNull(TricksCatalog.ParseTyped("corefonts; reboot").Error);
+        Assert.NotNull(TricksCatalog.ParseTyped("   ").Error);
+    }
+
+    [Fact]
+    public void UserVerbsJoinTheCatalog()
+    {
+        var file = Write("tricks.json", """
+            {
+              // mine
+              "verbs": [
+                { "id": "mfc42", "label": "MFC 4.2", "help": "For old launchers." },
+                { "id": "vcrun2022", "category": "Runtimes", "label": "VC++ (mine)" },
+                { "id": "-q", "label": "sneaky" },
+                { "id": "mfc42" },
+              ]
+            }
+            """);
+        var user = TricksCatalog.LoadUser(file, out var problems);
+        Assert.Equal(["mfc42", "vcrun2022"], user.Select(v => v.Id));
+        Assert.Equal(TricksCatalog.UserCategory, user[0].Category);
+        Assert.Single(problems);
+        var all = TricksCatalog.All(file);
+        Assert.Equal(TricksCatalog.Verbs.Count + 1, all.Count);
+        Assert.Equal("VC++ (mine)", all.Single(v => v.Id == "vcrun2022").Label);
+        Assert.Same(TricksCatalog.Verbs, TricksCatalog.All(Path.Combine(_dir, "missing.json")));
+        Write("broken.json", "{ nope");
+        Assert.Empty(TricksCatalog.LoadUser(Path.Combine(_dir, "broken.json"), out problems));
+        Assert.Single(problems);
+    }
+
+    [Fact]
+    public void TricksCommandRefusesOptions()
+    {
+        var runner = new TricksRunner("/usr/bin/protontricks", [], "protontricks");
+        var (_, args) = runner.Command("1245620", ["vcrun2022", "xna40"]);
+        Assert.Equal(["1245620", "-q", "vcrun2022", "xna40"], args);
+        Assert.Throws<ArgumentException>(() => runner.Command("1245620", ["--gui"]));
     }
 
     // ---- drives ----

@@ -91,7 +91,17 @@ public static class ActionFlow
                 ui.PickMany(input, v => AfterInput(a, v, ui));
                 break;
             case InputKind.Text:
-                ui.EnterText(input, v => AfterInput(a, v, ui));
+                ui.EnterText(input, v =>
+                {
+                    if (input.Validate?.Invoke(v) is { } error)
+                    {
+                        // Ask again with what was typed, so it can be fixed rather than retyped.
+                        ui.Notice(error, Tone.Warn);
+                        Ask(a, input with { Initial = v ?? "" }, ui);
+                        return;
+                    }
+                    AfterInput(a, v, ui);
+                });
                 break;
         }
     }
