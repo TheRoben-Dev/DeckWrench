@@ -29,4 +29,5 @@ screenshots, Linux and Windows exports).
 
 - ~~protontricks verbs beyond the curated list; custom verb lists in the config folder.~~ Done in 0.3.0.
 - Per-game notes on known fixes (from ProtonDB-style data the user adds).
-- Shader cache pre-caching controls, and a "free X GB on the SD card" planner.
+- Shader cache pre-caching controls.
+- ~~A "free X GB on the SD card" planner.~~ Done in 0.4.0.

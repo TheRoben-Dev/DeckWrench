@@ -753,6 +753,11 @@ public sealed class Actions
 
     public IReadOnlyList<ToolAction> ForStoragePage() =>
     [
+        CleanupAll(),
+        .. S.Drives.Select(d => FreeSpaceOnDrive(d.Drive)),
+    ];
+
+    private ToolAction CleanupAll() =>
         new()
         {
             Id = ActionId.Cleanup,
@@ -789,18 +794,7 @@ public sealed class Actions
                 foreach (var c in picked)
                 {
                     ctx.Ct.ThrowIfCancellationRequested();
-                    if (c.Kind == CleanupKind.OldBackup && S.Backups.FirstOrDefault(b => b.Archive == c.Path) is { } b)
-                    {
-                        _host.Backups.Delete(b);
-                    }
-                    else if (File.Exists(c.Path))
-                    {
-                        File.Delete(c.Path);
-                    }
-                    else if (Directory.Exists(c.Path))
-                    {
-                        PrefixBackups.DeleteTree(c.Path);
-                    }
+                    Remove(c);
                     freed += c.Size;
                     ctx.Progress.Report(++i / (double)picked.Count);
                     ctx.Log($"removed {c.Path}");
@@ -808,8 +802,107 @@ public sealed class Actions
                 AppLog.Info($"cleanup: {picked.Count} items, {DiskSize.Format(freed)}");
                 return Task.FromResult(new ActionResult($"Freed {DiskSize.Format(freed)}"));
             },
-        },
-    ];
+        };
+
+    private void Remove(CleanupItem c)
+    {
+        if (c.Kind == CleanupKind.OldBackup && S.Backups.FirstOrDefault(b => b.Archive == c.Path) is { } b)
+        {
+            _host.Backups.Delete(b);
+        }
+        else if (File.Exists(c.Path))
+        {
+            File.Delete(c.Path);
+        }
+        else if (Directory.Exists(c.Path))
+        {
+            PrefixBackups.DeleteTree(c.Path);
+        }
+    }
+
+    /// <summary>Free space on one drive: its cleanup items and moving its biggest games elsewhere, in one go.</summary>
+    private ToolAction FreeSpaceOnDrive(Drive drive)
+    {
+        var steamRunning = SteamShortcuts.SteamRunning(_host.Paths.Home);
+        var options = SpacePlanner.Options(S, drive, p => Drives.For(p), movesAllowed: !steamRunning, LibraryLabel);
+        var where = $"{drive.Label} ({drive.Mount})";
+        return new ToolAction
+        {
+            Id = ActionId.FreeSpaceOnDrive,
+            Label = $"Free space on {drive.Label} ({DiskSize.Format(drive.Free)} free)",
+            Destructive = true,
+            Help = $"Pick what to remove from {where} and which games to move to another drive; the total shows before anything happens."
+                + (steamRunning ? " Close Steam to move games too." : ""),
+            Unavailable = options.Count == 0 ? $"Nothing on {drive.Label} can be cleaned up or moved to another drive." : null,
+            Target = drive.Mount,
+            Input = new ActionInput
+            {
+                Kind = InputKind.MultiChoice,
+                Prompt = $"Free space on {where}: {DiskSize.Format(drive.Free)} of {DiskSize.Format(drive.Total)} free",
+                Choices = options.Select(o => new ActionChoice(o.Id, o.Label, o.Detail, o.Suggested, o.Group)).ToList(),
+            },
+            Plan = (input, _) =>
+            {
+                var picked = SpacePlanner.Picked(options, input, p => Drives.For(p));
+                var frees = picked.Sum(o => o.Frees);
+                var moves = picked.Where(o => o.Game != null).ToList();
+                var cautions = new List<string>();
+                if (picked.FirstOrDefault(o => o.Cleanup?.Kind == CleanupKind.OrphanPrefix) is { } prefix)
+                {
+                    cautions.Add(prefix.Cleanup!.Caution ?? "");
+                }
+                if (moves.Count > 0)
+                {
+                    cautions.Add("Keep Steam closed until the moves finish.");
+                }
+                return new ConfirmPlan
+                {
+                    Title = $"Free {DiskSize.Format(frees)} on {drive.Label}? It will have {DiskSize.Format(drive.Free + frees)} free.",
+                    Verb = $"Free {DiskSize.Format(frees)}",
+                    Contents = picked.Select(o => (o.Game != null
+                        ? $"Move {o.Game.Title} to {LibraryLabel(o.MoveTo!)}"
+                        : $"Remove {o.Cleanup!.Title} — {o.Cleanup.Path}", o.Frees)).ToList(),
+                    TotalSize = frees,
+                    Caution = cautions.Count > 0 ? string.Join(" ", cautions.Where(c => c.Length > 0)) : null,
+                    Paths = picked.Select(o => o.Cleanup?.Path ?? o.Game!.Install.InstallDir).ToList(),
+                };
+            },
+            Run = ctx =>
+            {
+                var picked = SpacePlanner.Picked(options, ctx.Input, p => Drives.For(p));
+                if (picked.Count == 0)
+                {
+                    return Task.FromResult(new ActionResult("Nothing picked", Rescan: false));
+                }
+                if (picked.Any(o => o.Game != null) && SteamShortcuts.SteamRunning(_host.Paths.Home))
+                {
+                    throw new InvalidOperationException("Steam is running. Close it so games can be moved, then try again.");
+                }
+                var total = Math.Max(1, picked.Sum(o => o.Frees));
+                long done = 0;
+                foreach (var o in picked.OrderBy(o => o.Game == null ? 0 : 1))
+                {
+                    ctx.Ct.ThrowIfCancellationRequested();
+                    if (o.Cleanup is { } c)
+                    {
+                        Remove(c);
+                        ctx.Log($"removed {c.Path}");
+                    }
+                    else
+                    {
+                        var start = done;
+                        var plan = GameMover.Plan(o.Game!.Install, o.MoveTo!);
+                        GameMover.Execute(plan, new Relay(f => ctx.Progress.Report((start + f * o.Frees) / total)), ctx.Ct);
+                        ctx.Log($"moved {o.Game.Title} to {o.MoveTo}");
+                    }
+                    done += o.Frees;
+                    ctx.Progress.Report(done / (double)total);
+                }
+                AppLog.Info($"freed {DiskSize.Format(done)} on {where}: {picked.Count} items");
+                return Task.FromResult(new ActionResult($"Freed {DiskSize.Format(done)} on {drive.Label}"));
+            },
+        };
+    }
 
     private static string CleanupGroup(CleanupKind k) => k switch
     {
@@ -907,4 +1000,10 @@ public static class ProcessRunner
         }
         return p.ExitCode;
     }
+}
+
+/// <summary>Reports straight through (no SynchronizationContext hop, unlike Progress&lt;T&gt;).</summary>
+internal sealed class Relay(Action<double> report) : IProgress<double>
+{
+    public void Report(double value) => report(value);
 }

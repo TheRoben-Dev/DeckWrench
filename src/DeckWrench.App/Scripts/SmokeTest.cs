@@ -175,6 +175,14 @@ public partial class SmokeTest : Node
             Tap(JoyButton.A);
         }, wait: 1.2, expect: "Apply");
         Step("cleanup-back", () => Tap(JoyButton.B), tab: "Storage");
+        // Per-drive planner: this drive's cleanup (moves need a second drive), then the plan with sizes, cancelled.
+        Step("free-space", () =>
+        {
+            ActionButton(ActionId.FreeSpaceOnDrive)?.GrabFocus();
+            Tap(JoyButton.A);
+        }, wait: 1.2, expect: "Apply");
+        Step("free-space-plan", () => Tap(JoyButton.Y), wait: 1.5, expect: "Cancel");
+        Step("free-space-cancel", () => Tap(JoyButton.B), tab: "Storage");
         // Logs: the viewer suggests the missing runtimes.
         Step("logs-tab", () => Key(Godot.Key.Key6, ctrl: true), tab: "Logs");
         Step("log-page", () =>
@@ -282,6 +290,8 @@ public partial class SmokeTest : Node
         Step("desktop-storage", () => Key(Godot.Key.Key5, ctrl: true), tab: "Storage");
         Step("desktop-cleanup", () => ActionButton(ActionId.Cleanup)?.EmitSignal(BaseButton.SignalName.Pressed), wait: 1.0);
         Step("desktop-cleanup-cancel", () => Check(PressInWindow("Cancel"), "no cleanup window"), tab: "Storage");
+        Step("desktop-free-space", () => ActionButton(ActionId.FreeSpaceOnDrive)?.EmitSignal(BaseButton.SignalName.Pressed), wait: 1.0);
+        Step("desktop-free-space-cancel", () => Check(PressInWindow("Cancel"), "no planner window"), tab: "Storage");
         Step("desktop-logs", () => Key(Godot.Key.Key6, ctrl: true), tab: "Logs");
         Step("desktop-log-viewer", () =>
         {

@@ -48,6 +48,7 @@ public enum ActionId
 
     // Storage
     Cleanup,
+    FreeSpaceOnDrive,
 }
 
 public enum InputKind
