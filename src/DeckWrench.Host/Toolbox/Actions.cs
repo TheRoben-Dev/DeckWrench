@@ -472,6 +472,7 @@ public sealed class Actions
         if (!p.External)
         {
             list.Add(RunTricks(p, name));
+            list.Add(RunTypedTricks(p, name));
         }
         return list;
     }
@@ -515,40 +516,74 @@ public sealed class Actions
         return list;
     }
 
+    private static string? TricksUnavailable(TricksRunner? runner) => Platform.IsWindows ? NotOnWindows
+        : runner == null ? "protontricks isn't installed. Get \"Protontricks\" from Discover (Flatpak), or your package manager." : null;
+
     private ToolAction RunTricks(AppFolder p, string name)
     {
         var runner = TricksRunner.Find(_host.Paths.Home);
+        var verbs = TricksCatalog.All(_host.Paths.TricksFile);
         return new ToolAction
         {
             Id = ActionId.RunTricks,
             Label = "Install runtimes and fonts (protontricks)",
-            Help = "Runs winetricks verbs in this prefix through protontricks: Visual C++, .NET, DirectX extras, fonts.",
-            Unavailable = Platform.IsWindows ? NotOnWindows
-                : runner == null ? "protontricks isn't installed. Get \"Protontricks\" from Discover (Flatpak), or your package manager." : null,
+            Help = "Runs winetricks verbs in this prefix through protontricks: Visual C++, .NET, DirectX extras, fonts"
+                + (verbs.Any(v => v.Category == TricksCatalog.UserCategory) ? ", and your own verbs from tricks.json." : ". Add your own in tricks.json in the config folder."),
+            Unavailable = TricksUnavailable(runner),
             ShowsOutput = true,
             Input = new ActionInput
             {
                 Kind = InputKind.MultiChoice,
                 Prompt = $"Install into {name}",
-                Choices = TricksCatalog.Verbs.Select(v => new ActionChoice(v.Id, v.Label, $"{v.Id} — {v.Help}", false, v.Category)).ToList(),
+                Choices = verbs.Select(v => new ActionChoice(v.Id, v.Label, $"{v.Id} — {v.Help}".TrimEnd(' ', '—'), false, v.Category)).ToList(),
             },
-            Run = async ctx =>
+            Run = ctx => InstallVerbs(runner!, p, name, (ctx.Input ?? "").Split('\n', StringSplitOptions.RemoveEmptyEntries), ctx),
+        };
+    }
+
+    private ToolAction RunTypedTricks(AppFolder p, string name)
+    {
+        var runner = TricksRunner.Find(_host.Paths.Home);
+        return new ToolAction
+        {
+            Id = ActionId.RunTypedTricks,
+            Label = "Run other winetricks verbs",
+            Help = "Type any winetricks verbs (separated by spaces), like d3dx9_43 or win7. Only verbs are passed, never options.",
+            Unavailable = TricksUnavailable(runner),
+            ShowsOutput = true,
+            Input = new ActionInput
             {
-                var verbs = (ctx.Input ?? "").Split('\n', StringSplitOptions.RemoveEmptyEntries);
-                if (verbs.Length == 0)
+                Kind = InputKind.Text,
+                Prompt = $"winetricks verbs to run in {name}",
+                Validate = text => TricksCatalog.ParseTyped(text).Error,
+            },
+            Run = ctx =>
+            {
+                var (verbs, error) = TricksCatalog.ParseTyped(ctx.Input);
+                if (error != null)
                 {
-                    return new ActionResult("Nothing picked", Rescan: false);
+                    throw new ArgumentException(error);
                 }
-                var (exe, args) = runner!.Command(p.AppId, verbs);
-                ctx.Progress.Report(-1);
-                var code = await ProcessRunner.Run(exe, args, ctx.Log, ctx.Ct).ConfigureAwait(false);
-                if (code != 0)
-                {
-                    throw new InvalidOperationException($"protontricks stopped with exit code {code}. The output shows why.");
-                }
-                return new ActionResult($"Installed {string.Join(", ", verbs)} into {name}");
+                return InstallVerbs(runner!, p, name, verbs, ctx);
             },
         };
+    }
+
+    private static async Task<ActionResult> InstallVerbs(TricksRunner runner, AppFolder p, string name, IReadOnlyList<string> verbs, ActionContext ctx)
+    {
+        if (verbs.Count == 0)
+        {
+            return new ActionResult("Nothing picked", Rescan: false);
+        }
+        var (exe, args) = runner.Command(p.AppId, verbs);
+        ctx.Progress.Report(-1);
+        var code = await ProcessRunner.Run(exe, args, ctx.Log, ctx.Ct).ConfigureAwait(false);
+        if (code != 0)
+        {
+            throw new InvalidOperationException($"protontricks stopped with exit code {code}. The output shows why.");
+        }
+        AppLog.Info($"protontricks {p.AppId}: {string.Join(' ', verbs)}");
+        return new ActionResult($"Installed {string.Join(", ", verbs)} into {name}");
     }
 
     public ToolAction DeleteBackup(PrefixBackup b) => new()

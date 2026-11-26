@@ -20,7 +20,7 @@ for mouse and keyboard.
 | --- | --- |
 | **Proton** | Every installed Proton (Valve, Experimental, Hotfix), GE-Proton and system build, with size and which games use it. Set a game's compatibility tool or the global default. Download GE-Proton from GitHub (SHA-512 checked) and remove custom builds. |
 | **Non-Steam games** | Shortcuts you added to Steam (Battle.net, emulators…) appear under Games with their Proton, prefix, shader cache, log and launch options (written to `shortcuts.vdf`). |
-| **Prefixes** | Open, back up (`.tar.gz`), restore, reset (always backs up first) or delete a game's `compatdata` prefix. Run curated protontricks verbs (Visual C++, .NET, DirectX extras, fonts, Windows version). Orphaned prefixes of uninstalled games are flagged. Heroic and Lutris prefixes are listed too. |
+| **Prefixes** | Open, back up (`.tar.gz`), restore, reset (always backs up first) or delete a game's `compatdata` prefix. Run curated protontricks verbs (Visual C++, .NET, DirectX extras, fonts, Windows version), your own verbs from `tricks.json`, or type any other winetricks verb. Orphaned prefixes of uninstalled games are flagged. Heroic and Lutris prefixes are listed too. |
 | **Shader cache** | Size per game, clear one, clear all orphans or clear everything. |
 | **Storage** | Per-drive breakdown (games, prefixes, shader caches, Proton versions, backups, everything else). Move a game between internal storage and the SD card (through Steam's own mover while Steam runs, or DeckWrench's own copy-verify-swap when it's closed). A cleanup list with what each item frees. |
 | **Launch options** | View and edit per-game launch options, or toggle presets: GameMode, MangoHud, `PROTON_LOG`, WineD3D, esync/fsync/NTSync, Wayland, NVAPI, DXVK HUD/async/frame caps, VKD3D DXR and feature level, DX11/DX12 switches… |
@@ -63,6 +63,16 @@ DeckWrench's own art so it opens from Game Mode. Updates are installed from insi
 
 protontricks (native or the Flatpak `com.github.Matoking.protontricks`) is needed for the runtime and
 font installs; everything else has no dependencies.
+
+Your own protontricks verbs go in `~/.config/deckwrench/tricks.json` and show up under "Your verbs"
+(an entry with a built-in id replaces it):
+
+```json
+{ "verbs": [ { "id": "mfc42", "label": "MFC 4.2", "help": "An old launcher needs it." } ] }
+```
+
+Only winetricks verbs are passed to protontricks, never options: lowercase letters, digits and
+`_ . + = -`, not starting with `-`.
 
 ### Windows
 

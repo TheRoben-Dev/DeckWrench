@@ -22,11 +22,11 @@ screenshots, Linux and Windows exports).
 
 - Run on a Steam Deck (SteamOS stable and beta) and Bazzite; fix what real libraries show up.
 - Steam's own mover from Game Mode (`steam://` deep links) where it exists for the running client.
-- Non-Steam shortcuts (Heroic/Lutris launched through Steam): their compatdata, names and art.
+- ~~Non-Steam shortcuts (Heroic/Lutris launched through Steam): their compatdata, names and art.~~ Done in 0.2.0.
 - Faster rescans (cache folder sizes by mtime).
 
 ## Phase 3: extras
 
-- protontricks verb search beyond the curated list; custom verb lists in the config folder.
+- ~~protontricks verbs beyond the curated list; custom verb lists in the config folder.~~ Done in 0.3.0.
 - Per-game notes on known fixes (from ProtonDB-style data the user adds).
 - Shader cache pre-caching controls, and a "free X GB on the SD card" planner.

@@ -40,6 +40,9 @@ public sealed class AppPaths
 
     public string SettingsFile => Path.Combine(Config, "settings.json");
 
+    /// <summary>The user's own winetricks verbs, added to the curated list.</summary>
+    public string TricksFile => Path.Combine(Config, "tricks.json");
+
     private static string? NonEmpty(string? s) => string.IsNullOrEmpty(s) ? null : s;
 
     private static string Xdg(Func<string, string?> env, string name, string home, string fallback)
