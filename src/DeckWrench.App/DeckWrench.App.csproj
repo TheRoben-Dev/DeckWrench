@@ -1,0 +1,11 @@
+<Project Sdk="Godot.NET.Sdk/4.7.2">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>DeckWrench.App</RootNamespace>
+    <AssemblyName>DeckWrench.App</AssemblyName>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DeckWrench.Host\DeckWrench.Host.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,30 @@
+{
+  "comment": "Curated winetricks verbs DeckWrench offers through protontricks. Each id is a winetricks verb; only verbs that are safe to run in a Proton prefix are listed.",
+  "verbs": [
+    { "id": "vcrun2022", "category": "Runtimes", "label": "Visual C++ 2015-2022", "help": "Microsoft's C++ runtime most current games need (also covers 2015, 2017 and 2019)." },
+    { "id": "vcrun2013", "category": "Runtimes", "label": "Visual C++ 2013", "help": "Older C++ runtime used by many 2013-2016 games and launchers." },
+    { "id": "vcrun2012", "category": "Runtimes", "label": "Visual C++ 2012", "help": "C++ runtime for some 2012-2014 games." },
+    { "id": "vcrun2010", "category": "Runtimes", "label": "Visual C++ 2010", "help": "C++ runtime for many 2010-2013 games and mod tools." },
+    { "id": "vcrun2008", "category": "Runtimes", "label": "Visual C++ 2008", "help": "C++ runtime for older games." },
+    { "id": "vcrun2005", "category": "Runtimes", "label": "Visual C++ 2005", "help": "C++ runtime for games from the mid 2000s." },
+    { "id": "dotnet48", "category": ".NET", "label": ".NET Framework 4.8", "help": "Needed by many mod managers, launchers and tools. Takes several minutes to install." },
+    { "id": "dotnet472", "category": ".NET", "label": ".NET Framework 4.7.2", "help": "For tools that ask for exactly 4.7.2." },
+    { "id": "dotnet40", "category": ".NET", "label": ".NET Framework 4.0", "help": "For older launchers and tools." },
+    { "id": "dotnet35", "category": ".NET", "label": ".NET Framework 3.5", "help": "For old XNA games and tools. Slow to install." },
+    { "id": "dotnetdesktop6", "category": ".NET", "label": ".NET Desktop Runtime 6", "help": "For modern .NET apps (mod tools, launchers) built on .NET 6." },
+    { "id": "dotnetdesktop8", "category": ".NET", "label": ".NET Desktop Runtime 8", "help": "For modern .NET apps built on .NET 8." },
+    { "id": "xna40", "category": "Runtimes", "label": "XNA Framework 4.0", "help": "For indie games built on XNA (Terraria-era)." },
+    { "id": "physx", "category": "Runtimes", "label": "PhysX", "help": "NVIDIA PhysX system software, for games that refuse to start without it." },
+    { "id": "d3dx9", "category": "DirectX", "label": "DirectX 9 extras (d3dx9)", "help": "The d3dx9_*.dll helper libraries older DirectX 9 games ship without." },
+    { "id": "d3dcompiler_47", "category": "DirectX", "label": "D3D shader compiler 47", "help": "Microsoft's shader compiler; fixes some games and launchers that build shaders at start." },
+    { "id": "d3dcompiler_43", "category": "DirectX", "label": "D3D shader compiler 43", "help": "The older shader compiler some DirectX 9-11 games need." },
+    { "id": "xact", "category": "Audio", "label": "XACT (32-bit)", "help": "Microsoft's XACT audio libraries; fixes missing sound in some older games." },
+    { "id": "xact_x64", "category": "Audio", "label": "XACT (64-bit)", "help": "64-bit XACT audio libraries." },
+    { "id": "corefonts", "category": "Fonts", "label": "Microsoft core fonts", "help": "Arial, Times New Roman, Verdana and friends; fixes missing or boxy text in launchers." },
+    { "id": "tahoma", "category": "Fonts", "label": "Tahoma", "help": "A font some older launchers and installers expect." },
+    { "id": "cjkfonts", "category": "Fonts", "label": "CJK fonts", "help": "Chinese, Japanese and Korean fonts, for games showing boxes instead of text." },
+    { "id": "win10", "category": "Settings", "label": "Report Windows 10", "help": "Makes the prefix report Windows 10 (Proton's default for most games)." },
+    { "id": "win7", "category": "Settings", "label": "Report Windows 7", "help": "For old launchers that refuse newer Windows versions." },
+    { "id": "fontsmooth=rgb", "category": "Settings", "label": "Smooth fonts (subpixel)", "help": "Turns on ClearType-style font smoothing in launchers." }
+  ]
+}

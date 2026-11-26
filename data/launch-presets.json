@@ -1,0 +1,25 @@
+{
+  "comment": "Launch option presets. kind: env (KEY=VALUE before %command%), wrapper (a command that wraps the game), arg (passed to the game after %command%). Presets in the same group replace each other.",
+  "presets": [
+    { "id": "gamemode", "category": "Performance", "kind": "wrapper", "value": "gamemoderun", "label": "GameMode", "help": "Runs the game through Feral GameMode (CPU governor and I/O priority). Bazzite and most desktop distros ship it; SteamOS doesn't need it." },
+    { "id": "mangohud", "category": "Performance", "kind": "wrapper", "value": "mangohud", "label": "MangoHud overlay", "help": "FPS, frame time and temperatures in an overlay. On a Steam Deck, the built-in performance overlay does the same." },
+    { "id": "proton-log", "category": "Proton", "kind": "env", "key": "PROTON_LOG", "value": "1", "label": "Proton log", "help": "Writes steam-<appid>.log to your home folder each run; read it in DeckWrench's Logs. Turn it off again when done: logs grow fast." },
+    { "id": "wined3d", "category": "Proton", "kind": "env", "key": "PROTON_USE_WINED3D", "value": "1", "label": "Use WineD3D (OpenGL)", "help": "Renders DirectX 9-11 through OpenGL instead of DXVK. Slower; for games that crash or show black screens with DXVK." },
+    { "id": "no-esync", "category": "Proton", "kind": "env", "key": "PROTON_NO_ESYNC", "value": "1", "label": "Turn off esync", "help": "For the rare game that hangs or stutters with eventfd synchronization." },
+    { "id": "no-fsync", "category": "Proton", "kind": "env", "key": "PROTON_NO_FSYNC", "value": "1", "label": "Turn off fsync", "help": "For the rare game that hangs with futex synchronization." },
+    { "id": "ntsync", "category": "Proton", "kind": "env", "key": "PROTON_USE_NTSYNC", "value": "1", "label": "Use NTSYNC", "help": "Kernel-level Windows synchronization (GE-Proton 10 and newer, kernel 6.14+ with the ntsync module)." },
+    { "id": "wayland", "category": "Proton", "kind": "env", "key": "PROTON_ENABLE_WAYLAND", "value": "1", "label": "Native Wayland", "help": "Uses Wine's Wayland driver instead of XWayland (GE-Proton 10 and newer). Needed for HDR outside Game Mode." },
+    { "id": "nvapi", "category": "Proton", "kind": "env", "key": "PROTON_ENABLE_NVAPI", "value": "1", "label": "NVAPI (DLSS on NVIDIA)", "help": "Lets games see an NVIDIA GPU's NVAPI, for DLSS and Reflex. Desktop NVIDIA cards only." },
+    { "id": "hide-nvidia", "category": "Proton", "kind": "env", "key": "PROTON_HIDE_NVIDIA_GPU", "value": "1", "label": "Hide NVIDIA GPU", "help": "Reports an AMD GPU to games that misbehave on NVIDIA paths." },
+    { "id": "dxvk-hud", "category": "DXVK / VKD3D", "kind": "env", "key": "DXVK_HUD", "value": "fps", "label": "DXVK FPS counter", "help": "A small FPS counter drawn by DXVK (DirectX 9-11 games)." },
+    { "id": "dxvk-async", "category": "DXVK / VKD3D", "kind": "env", "key": "DXVK_ASYNC", "value": "1", "label": "DXVK async shaders", "help": "Compiles shaders in the background to cut stutter. Only GE-Proton builds with the gplasync patch use it; never in online games with anti-cheat." },
+    { "id": "dxvk-60", "category": "DXVK / VKD3D", "group": "dxvk-fps", "kind": "env", "key": "DXVK_FRAME_RATE", "value": "60", "label": "Cap at 60 FPS (DXVK)", "help": "DXVK's own frame limiter, for games without one." },
+    { "id": "dxvk-40", "category": "DXVK / VKD3D", "group": "dxvk-fps", "kind": "env", "key": "DXVK_FRAME_RATE", "value": "40", "label": "Cap at 40 FPS (DXVK)", "help": "40 FPS: smooth on the Steam Deck's screen at 40 Hz, and easy on the battery." },
+    { "id": "vkd3d-dxr", "category": "DXVK / VKD3D", "kind": "env", "key": "VKD3D_CONFIG", "value": "dxr", "label": "Ray tracing (VKD3D)", "help": "Turns on DirectX Raytracing in VKD3D-Proton for DirectX 12 games that support it." },
+    { "id": "vkd3d-fl", "category": "DXVK / VKD3D", "kind": "env", "key": "VKD3D_FEATURE_LEVEL", "value": "12_2", "label": "DirectX 12 feature level 12_2", "help": "Reports feature level 12_2 to games that check for it (some DirectX 12 Ultimate titles)." },
+    { "id": "dinput8", "category": "Mods", "kind": "env", "key": "WINEDLLOVERRIDES", "value": "\"dinput8=n,b\"", "label": "Load dinput8.dll from the game", "help": "Native-first dinput8, the override most DLL mod loaders (Ultimate ASI Loader, script hooks) need." },
+    { "id": "dx11", "category": "Game", "group": "dx", "kind": "arg", "value": "-dx11", "label": "Start in DirectX 11", "help": "For games that offer DX11 and DX12; DX11 is often smoother through DXVK." },
+    { "id": "dx12", "category": "Game", "group": "dx", "kind": "arg", "value": "-dx12", "label": "Start in DirectX 12", "help": "Forces the DX12 renderer in games that offer both." },
+    { "id": "skip-launcher", "category": "Game", "kind": "arg", "value": "-skipLauncher", "label": "Skip the publisher launcher", "help": "Common flag for games with a pre-launcher (works in some Bethesda, 2K and Paradox titles)." }
+  ]
+}

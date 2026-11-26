@@ -1,0 +1,30 @@
+# DeckWrench plan
+
+Phased pull requests, each with CI green (build, unit tests, headless UI smoke test with
+screenshots, Linux and Windows exports).
+
+## Phase 1: the toolbox (this PR)
+
+- Solution structure from Luma Modman: Core (no Godot), Host, CLI, App, tests; themes, sounds,
+  animation, controller navigation, self-update, Steam shortcut with art, installers.
+- Detection: Steam (every library, SD card, Flatpak), Heroic, Lutris; compat tools, prefixes,
+  shader caches, Proton logs, drives.
+- All six sections with their actions, in controller and desktop mode, from one shared catalog.
+- Steam config writes (CompatToolMapping, LaunchOptions) with backups, and the waiting-changes queue
+  with a Steam-restart helper for when Steam is running.
+- Confirmations with sizes and contents for every destructive action; backups before resets.
+- Unit tests, a scan test against the fake Steam install, and a 90-step UI smoke test in both modes
+  with a parity check.
+
+## Phase 2: hardening on real hardware
+
+- Run on a Steam Deck (SteamOS stable and beta) and Bazzite; fix what real libraries show up.
+- Steam's own mover from Game Mode (`steam://` deep links) where it exists for the running client.
+- Non-Steam shortcuts (Heroic/Lutris launched through Steam): their compatdata, names and art.
+- Faster rescans (cache folder sizes by mtime).
+
+## Phase 3: extras
+
+- protontricks verb search beyond the curated list; custom verb lists in the config folder.
+- Per-game notes on known fixes (from ProtonDB-style data the user adds).
+- Shader cache pre-caching controls, and a "free X GB on the SD card" planner.
