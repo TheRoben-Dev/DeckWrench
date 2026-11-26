@@ -76,6 +76,12 @@ public class ToolboxScanTests : IDisposable
         Assert.Contains(s.Cleanup, c => c.Kind == CleanupKind.OrphanPrefix);
         Assert.Contains(s.Cleanup, c => c.Kind == CleanupKind.OrphanShaderCache);
         Assert.Contains(s.Cleanup, c => c.Kind == CleanupKind.UnusedProton && c.Title.Contains("GE-Proton8-25"));
+        // Steam leftovers of the uninstalled app only: the installed game's download and Workshop folders stay.
+        Assert.Equal([LeftoverKind.Download, LeftoverKind.Temp, LeftoverKind.Workshop], s.Leftovers.Select(l => l.Kind).Order());
+        Assert.All(s.Leftovers, l => Assert.Equal("271590", l.AppId));
+        Assert.Contains(s.Cleanup, c => c.Kind == CleanupKind.SteamLeftover && c.Title == "Unfinished download of app 271590" && c.Size >= 300L << 20);
+        Assert.Contains(s.Cleanup, c => c.Kind == CleanupKind.SteamLeftover && c.Title.StartsWith("Workshop items", StringComparison.Ordinal));
+        Assert.DoesNotContain(s.Cleanup, c => c.Path.Contains("1245620", StringComparison.Ordinal) && c.Kind == CleanupKind.SteamLeftover);
         Assert.True(s.Reclaimable > 0);
         Assert.NotEmpty(s.Drives);
         Assert.True(s.Drives[0].Games > 0);

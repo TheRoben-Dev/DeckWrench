@@ -155,6 +155,7 @@ public sealed class ToolboxScanner
         progress?.Report(0.85);
 
         var backups = _backups.List();
+        var leftovers = SteamLeftovers.Scan(libraries).Select(l => l with { Size = _sizes.Of(l.Dir, ct) }).ToList();
         var state = new ToolboxState
         {
             ScannedAt = DateTime.UtcNow,
@@ -169,6 +170,7 @@ public sealed class ToolboxScanner
             Logs = logs,
             Backups = backups,
             Pending = pending,
+            Leftovers = leftovers,
         };
         state = state with
         {
@@ -277,6 +279,25 @@ public sealed class ToolboxScanner
                 Detail = "No game is set to use it, and it isn't the default.",
                 Path = t.Dir,
                 Size = Math.Max(0, t.Size),
+            });
+        }
+        foreach (var l in s.Leftovers)
+        {
+            var app = s.Games.FirstOrDefault(g => g.AppId == l.AppId)?.Title ?? "app " + l.AppId;
+            items.Add(new CleanupItem
+            {
+                Kind = CleanupKind.SteamLeftover,
+                Title = l.Kind switch
+                {
+                    LeftoverKind.Download => $"Unfinished download of {app}",
+                    LeftoverKind.Temp => $"Update scratch of {app}",
+                    _ => $"Workshop items of {app}",
+                },
+                Detail = l.Kind == LeftoverKind.Workshop
+                    ? "Mods and maps downloaded from the Workshop for a game that isn't installed. Steam downloads them again if you reinstall."
+                    : "Steam left this behind for a game that isn't installed.",
+                Path = l.Dir,
+                Size = Math.Max(0, l.Size),
             });
         }
         foreach (var l in s.Logs)
