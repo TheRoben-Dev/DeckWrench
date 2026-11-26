@@ -23,7 +23,7 @@ screenshots, Linux and Windows exports).
 - Run on a Steam Deck (SteamOS stable and beta) and Bazzite; fix what real libraries show up.
 - Steam's own mover from Game Mode (`steam://` deep links) where it exists for the running client.
 - ~~Non-Steam shortcuts (Heroic/Lutris launched through Steam): their compatdata, names and art.~~ Done in 0.2.0.
-- Faster rescans (cache folder sizes by mtime).
+- ~~Faster rescans (cache folder sizes by mtime).~~ Done in 0.6.0.
 
 ## Phase 3: extras
 

@@ -82,6 +82,22 @@ public class ToolboxScanTests : IDisposable
     }
 
     [LinuxFact]
+    public void ASecondScanReusesFolderSizes()
+    {
+        var host = Host();  // first scan measured everything
+        var first = host.State;
+        Assert.True(File.Exists(Path.Combine(host.Paths.Cache, "sizes.json")));
+        host.Scan();
+        Assert.Equal(first.Prefixes.Select(p => p.Size), host.State.Prefixes.Select(p => p.Size));
+        Assert.Equal(first.Tools.Select(t => t.Size), host.State.Tools.Select(t => t.Size));
+        // Scan again (the action) measures everything afresh.
+        var rescan = host.Actions.Global().Single(x => x.Id == ActionId.Rescan);
+        rescan.Run!(new ActionContext(null, new Progress<double>(), _ => { }, CancellationToken.None)).Wait();
+        host.Scan();
+        Assert.Equal(first.Prefixes.Select(p => p.Size), host.State.Prefixes.Select(p => p.Size));
+    }
+
+    [LinuxFact]
     public void EveryDestructiveActionShowsWhatItRemovesFirst()
     {
         var host = Host();

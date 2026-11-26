@@ -34,8 +34,12 @@ public sealed class Actions
             {
                 Id = ActionId.Rescan,
                 Label = "Scan again",
-                Help = "Reads Steam (every library, SD card too), Heroic and Lutris again and re-measures folders.",
-                Run = _ => Task.FromResult(new ActionResult("Scanned")),
+                Help = "Reads Steam (every library, SD card too), Heroic and Lutris again and re-measures every folder.",
+                Run = _ =>
+                {
+                    _host.Sizes.Forget();
+                    return Task.FromResult(new ActionResult("Scanned"));
+                },
             },
         };
         list.AddRange(PendingActions());

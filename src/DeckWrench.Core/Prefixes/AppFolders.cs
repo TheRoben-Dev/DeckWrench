@@ -61,7 +61,7 @@ public static class AppFolders
     /// <param name="shortcuts">App ids of non-Steam shortcuts (subset of owners).</param>
     /// <param name="measure">Measure folder sizes (slow on big prefixes; off for quick listings).</param>
     public static IReadOnlyList<AppFolder> Scan(AppFolderKind kind, IEnumerable<string> libraries, IReadOnlyDictionary<string, string> owners,
-        IReadOnlySet<string> shortcuts, bool measure = true, CancellationToken ct = default)
+        IReadOnlySet<string> shortcuts, bool measure = true, CancellationToken ct = default, Func<string, CancellationToken, long>? size = null)
     {
         var list = new List<AppFolder>();
         var seen = new HashSet<string>(Platform.PathComparer);
@@ -94,7 +94,7 @@ public static class AppFolders
                     Owner = owners.GetValueOrDefault(id),
                     IsShortcut = shortcuts.Contains(id),
                     ProtonVersion = kind == AppFolderKind.Prefix ? ReadVersion(dir) : null,
-                    Size = measure ? DiskSize.Of(dir, ct) : -1,
+                    Size = measure ? (size ?? DiskSize.Of)(dir, ct) : -1,
                     Modified = SafeModified(dir),
                 });
             }
