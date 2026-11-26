@@ -107,6 +107,29 @@ public class ToolboxScanTests : IDisposable
     }
 
     [LinuxFact]
+    public async Task TheReportCoversTheLibraryWithoutTheHomePath()
+    {
+        var host = Host();
+        host.Notes.Set("steam:1245620", "GE fixes cutscenes");
+        var report = LibraryReport.Build(host.State, host, osName: "SteamOS 3.7");
+        Assert.Contains("SteamOS 3.7", report);
+        Assert.Contains("| ELDEN RING | Steam 1245620 |", report);
+        Assert.Contains("Battle.net", report);
+        Assert.Contains("GE-Proton9-20", report);
+        Assert.Contains("PROTON_LOG=1", report);
+        Assert.Contains("GE fixes cutscenes", report);
+        Assert.Contains("MSVCP140.dll", report);  // the fake log's error, under Proton logs
+        Assert.Contains("~/", report);
+        Assert.DoesNotContain(_home, report);
+
+        var save = host.Actions.Global().Single(x => x.Id == ActionId.SaveReport);
+        var result = await save.Run!(new ActionContext(null, new Progress<double>(), _ => { }, CancellationToken.None));
+        var file = result.Message["Report saved: ".Length..];
+        Assert.True(File.Exists(file));
+        Assert.StartsWith(Path.Combine(host.Paths.Data, "reports"), file);
+    }
+
+    [LinuxFact]
     public void ASecondScanReusesFolderSizes()
     {
         var host = Host();  // first scan measured everything

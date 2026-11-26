@@ -24,6 +24,8 @@ internal static class Cli
           deckwrench storage                  what takes space on each drive, and what can be freed
           deckwrench logs                     Proton logs
           deckwrench pending                  Steam settings waiting for Steam to close
+          deckwrench report [--save]          a Markdown report of the system and library, for
+                                              asking for help (--save: also write it to a file)
           deckwrench apply-pending [--wait] [--restart-steam]
                                               write pending Steam settings (--wait: wait up to two
                                               minutes for Steam to exit first)
@@ -125,6 +127,16 @@ internal static class Cli
                     foreach (var l in s.Logs)
                     {
                         Console.WriteLine($"{l.Modified.ToLocalTime():g}  {DiskSize.Format(l.Size),9}  {l.Owner ?? "app " + l.AppId}  {l.Path}");
+                    }
+                    return 0;
+                }
+                case "report":
+                {
+                    var s = host.Scan();
+                    Console.Write(LibraryReport.Build(s, host));
+                    if (args.Contains("--save"))
+                    {
+                        Console.Error.WriteLine("saved " + LibraryReport.Save(s, host));
                     }
                     return 0;
                 }

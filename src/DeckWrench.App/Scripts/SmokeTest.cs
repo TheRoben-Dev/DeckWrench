@@ -230,6 +230,18 @@ public partial class SmokeTest : Node
         Step("log-page-back", () => Tap(JoyButton.B), tab: "Logs");
         // View / Select: status and global actions.
         Step("status", () => Tap(JoyButton.Back), expect: "Scan again");
+        Step("report", () =>
+        {
+            ActionButton(ActionId.SaveReport)?.GrabFocus();
+            Tap(JoyButton.A);
+        }, wait: 2.0, expect: "Close");
+        Step("report-saved", () =>
+        {
+            var dir = Path.Combine(Main.Instance.Host!.Paths.Data, "reports");
+            var file = Directory.Exists(dir) ? Directory.GetFiles(dir, "*.md").FirstOrDefault() : null;
+            Check(file != null && File.ReadAllText(file).Contains("| ELDEN RING |"), "no report with the games in it");
+            (Focusable("Back to where you were") as BaseButton)?.EmitSignal(BaseButton.SignalName.Pressed);
+        }, wait: 1.0, expect: "Save a report");
         Step("status-back", () => Tap(JoyButton.B), tab: "Logs");
         Step("rescan", () => Tap(JoyButton.Y), wait: 2.5, tab: "Logs");
         // Settings: categories and panes.
