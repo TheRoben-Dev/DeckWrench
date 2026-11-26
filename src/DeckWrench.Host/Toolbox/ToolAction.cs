@@ -15,6 +15,7 @@ public enum ActionId
     // Games
     SetCompatTool,
     EditLaunchOptions,
+    CopyLaunchOptions,
     LaunchPresets,
     ToggleProtonLog,
     MoveGame,
@@ -26,6 +27,7 @@ public enum ActionId
     // Proton
     InstallGeProton,
     SetDefaultTool,
+    UseToolForGames,
     RemoveTool,
     OpenToolFolder,
 

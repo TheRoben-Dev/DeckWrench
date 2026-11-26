@@ -3,6 +3,11 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.9.0
+
+- Proton: "Use for games" on any Proton version ticks the games that run with it; tick more to switch them over in one go, untick one to set it back to Steam's default. Handy after installing a new GE-Proton.
+- Games: "Copy launch options from another game".
+
 ## 0.8.0
 
 - "Save a report" (View / Select, and in desktop mode): a Markdown file with your system, drives, Proton versions, every game's Proton, launch options and prefix, recent Proton log errors, your notes and what can be cleaned up, to paste when asking for help. Your home folder is written as ~. Also `deckwrench report` on the command line.

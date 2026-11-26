@@ -217,6 +217,38 @@ public class ToolboxScanTests : IDisposable
     }
 
     [LinuxFact]
+    public async Task OneProtonForSeveralGamesAndCopiedLaunchOptions()
+    {
+        var host = Host();
+        static ActionContext Ctx(string? input) => new(input, new Progress<double>(), _ => { }, CancellationToken.None);
+        var s = host.State;
+        var ge9 = s.Tool("GE-Proton9-20")!;
+        var use = host.Actions.ForTool(ge9).Single(x => x.Id == ActionId.UseToolForGames);
+        var ticked = use.Input!.Choices.Where(c => c.Selected).Select(c => c.Id).ToList();
+        Assert.Equal(2, ticked.Count);  // ELDEN RING and the Battle.net shortcut
+        var elden = s.Games.Single(g => g.AppId == "1245620");
+        var hades = s.Games.Single(g => g.Title == "Hades");
+        var cyberpunk = s.Games.Single(g => g.Title == "Cyberpunk 2077");
+        // Tick Hades and Cyberpunk, untick ELDEN RING.
+        var input = ticked.Where(k => k != elden.Key).Append(hades.Key).Append(cyberpunk.Key);
+        var result = await use.Run!(Ctx(string.Join('\n', input)));
+        Assert.Contains("2 games to GE-Proton9-20", result.Message);
+        Assert.Contains("1 back to Steam's default", result.Message);
+        var mapping = new SteamConfig(s.SteamRoot!).CompatToolMapping();
+        Assert.Equal("GE-Proton9-20", mapping[hades.AppId]);
+        Assert.Equal("GE-Proton9-20", mapping[cyberpunk.AppId]);
+        Assert.False(mapping.TryGetValue(elden.AppId, out var e) && e != null && e.Length > 0, $"ELDEN RING still maps to {e}");
+
+        host.Scan();
+        hades = host.State.Games.Single(g => g.Title == "Hades");
+        var copy = host.Actions.ForGame(hades).Single(x => x.Id == ActionId.CopyLaunchOptions);
+        Assert.Contains(copy.Input!.Choices, c => c.Id == cyberpunk.Key);
+        Assert.DoesNotContain(copy.Input.Choices, c => c.Id == hades.Key);
+        await copy.Run!(Ctx(cyberpunk.Key));
+        Assert.Equal("-skipStartScreen", new SteamConfig(s.SteamRoot!).LaunchOptions()[hades.AppId]);
+    }
+
+    [LinuxFact]
     public async Task NonSteamShortcutsAreGamesWithProtonSettings()
     {
         var host = Host();
