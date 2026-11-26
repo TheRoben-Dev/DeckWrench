@@ -68,6 +68,8 @@ public static class Anim
     }
 
     /// <summary>Page enters: fade in while sliding from the side (dir -1 from left, +1 from right).</summary>
+    private const string RestMeta = "dw_rest";
+
     public static void Enter(Control c, int dir = 1, double delay = 0)
     {
         var t = Tween(c);
@@ -76,9 +78,15 @@ public static class Anim
             return;
         }
         c.Modulate = c.Modulate with { A = 0 };
-        var offset = new Vector2(36 * dir, 0);
-        c.Position += offset;
-        var target = c.Position - offset;
+        // Slide in to where the control rests. Remembered from the first entry: a screen entered
+        // again while its last slide was still running (a quick Back through several pages)
+        // would otherwise settle at that half-way position, a little further off each time.
+        if (!c.HasMeta(RestMeta))
+        {
+            c.SetMeta(RestMeta, c.Position);
+        }
+        var target = c.GetMeta(RestMeta).AsVector2();
+        c.Position = target + new Vector2(36 * dir, 0);
         t.SetParallel();
         t.TweenProperty(c, "modulate:a", 1f, Slow).SetDelay(delay);
         t.TweenProperty(c, "position", target, Slow).SetDelay(delay);

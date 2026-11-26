@@ -130,6 +130,11 @@ public sealed class Actions
             });
         }
         list.Add(OpenFolder(ActionId.OpenInstallFolder, "Open install folder", g.Install.InstallDir));
+        list.Add(EditNotes(g));
+        if (g.IsSteam)
+        {
+            list.Add(OpenProtonDb(g));
+        }
         return list;
     }
 
@@ -287,6 +292,40 @@ public sealed class Actions
                 GameMover.Execute(plan, ctx.Progress, ctx.Ct);
                 AppLog.Info($"moved {g.Title} to {ctx.Input}");
                 return Task.FromResult(new ActionResult($"Moved {g.Title} to {LibraryLabel(ctx.Input)}"));
+            },
+        };
+    }
+
+    private ToolAction EditNotes(GameEntry g)
+    {
+        var note = _host.Notes.Get(g.Key) ?? "";
+        return new ToolAction
+        {
+            Id = ActionId.EditNotes,
+            Label = note.Length > 0 ? "Edit your notes" : "Add a note",
+            Help = "Your own notes on this game: what fixed it, which Proton works, settings to remember. Kept in notes.json in the config folder.",
+            Input = new ActionInput { Kind = InputKind.Text, Prompt = $"Notes on {g.Title}", Initial = note },
+            Run = ctx =>
+            {
+                _host.Notes.Set(g.Key, ctx.Input);
+                return Task.FromResult(new ActionResult(string.IsNullOrWhiteSpace(ctx.Input) ? "Note removed" : "Note saved"));
+            },
+        };
+    }
+
+    /// <summary>ProtonDB's page for the game: in Steam's own browser in Game Mode (no desktop browser there).</summary>
+    private static ToolAction OpenProtonDb(GameEntry g)
+    {
+        var url = $"https://www.protondb.com/app/{g.AppId}";
+        return new ToolAction
+        {
+            Id = ActionId.OpenProtonDb,
+            Label = "Reports on ProtonDB",
+            Help = "Opens the game's ProtonDB page: what other players run it with, and their fixes. " + url,
+            Run = _ =>
+            {
+                var opened = Opener.Open(SteamSetup.InGameMode ? "steam://openurl/" + url : url);
+                return Task.FromResult(new ActionResult(opened ? "Opened ProtonDB" : "Couldn't open a browser. " + url, Rescan: false));
             },
         };
     }

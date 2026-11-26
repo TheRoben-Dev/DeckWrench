@@ -68,6 +68,7 @@ public sealed class AppHost
     public HttpClient Http { get; }
     public PendingChanges Pending { get; }
     public PrefixBackups Backups { get; }
+    public GameNotes Notes { get; }
     public Actions Actions { get; }
 
     private readonly ToolboxScanner _scanner;
@@ -87,6 +88,7 @@ public sealed class AppHost
         Http = http ?? AppUpdater.DefaultClient();
         Updater = new AppUpdater(Http);
         Pending = new PendingChanges(Path.Combine(Paths.Config, "pending.json"));
+        Notes = new GameNotes(Path.Combine(Paths.Config, "notes.json"));
         Backups = new PrefixBackups(Path.Combine(Paths.Data, "backups", "prefixes"));
         _scanner = new ToolboxScanner(Paths, Pending, Backups);
         Actions = new Actions(this);

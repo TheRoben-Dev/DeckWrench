@@ -68,13 +68,18 @@ public sealed class GamesSection : Section
     public override IReadOnlyList<Fact> Facts(object item)
     {
         var g = (GameEntry)item;
-        var facts = new List<Fact>
+        var facts = new List<Fact>();
+        if (Host.Notes.Get(g.Key) is { } note)
+        {
+            facts.Add(new("Your notes", note, Tone.Accent));
+        }
+        facts.AddRange(new List<Fact>
         {
             new("Source", SourceName(g.Install) + (g.RunsInSteam ? $" · app {g.AppId}" : "")),
             new("Installed in", g.Install.InstallDir),
             new("Drive", g.Drive != null ? $"{g.Drive.Label} · {DiskSize.Format(g.Drive.Free)} free" : "?"),
             new("Size", DiskSize.Format(g.Size)),
-        };
+        });
         if (g.RunsInSteam)
         {
             facts.Add(new("Proton", S.ToolLabel(g.EffectiveCompatTool), g.EffectiveCompatTool != null && S.Tool(g.EffectiveCompatTool) == null ? Tone.Warn : Tone.Accent));
