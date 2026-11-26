@@ -3,6 +3,10 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.4.0
+
+- Storage: "Free space on <drive>" for each drive with a Steam library. It lists what can go from that drive (orphaned caches and prefixes, unused Proton, logs, old backups) and its biggest games with the drive they'd move to, then shows the total and everything it touches before you confirm. Moves only happen while Steam is closed, and never when the other drive would end up with less than 1 GB free.
+
 ## 0.3.0
 
 - Run any other winetricks verb in a game's prefix: type the verbs (Steam's keyboard in Game Mode). Options and anything that isn't a verb are refused before protontricks runs.
