@@ -92,6 +92,13 @@ shaders "$STEAM" 1245620 900M
 shaders "$STEAM" 1091500 1500M
 shaders "$SD" 1145360 120M
 shaders "$STEAM" 271590 700M           # orphaned
+# Steam leftovers of the uninstalled game: an unfinished update and its Workshop items. The
+# installed game's own download folder and Workshop items are not leftovers.
+sized "$STEAM/steamapps/downloading/271590/update/x64/data.rpf" 300M
+sized "$SD/steamapps/temp/271590/chunk" 20M
+sized "$STEAM/steamapps/workshop/content/271590/2900000001/mod.pak" 150M
+sized "$STEAM/steamapps/downloading/1245620/patch.bin" 10M
+sized "$STEAM/steamapps/workshop/content/1245620/3100000001/item.bin" 5M
 
 cat > "$STEAM/config/config.vdf" <<VDF
 "InstallConfigStore"

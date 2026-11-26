@@ -1138,6 +1138,7 @@ public sealed class Actions
         CleanupKind.OrphanShaderCache => "Orphaned shader caches",
         CleanupKind.UnusedProton => "Unused Proton versions",
         CleanupKind.ProtonLog => "Proton logs",
+        CleanupKind.SteamLeftover => "Steam leftovers",
         _ => "Old backups",
     };
 

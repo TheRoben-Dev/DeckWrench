@@ -88,6 +88,7 @@ public enum CleanupKind
     UnusedProton,
     ProtonLog,
     OldBackup,
+    SteamLeftover,
 }
 
 /// <summary>Something that can go to free space, with how much it frees.</summary>
@@ -135,6 +136,9 @@ public sealed record ToolboxState
     public IReadOnlyList<PrefixBackup> Backups { get; init; } = [];
 
     public IReadOnlyList<PendingChange> Pending { get; init; } = [];
+
+    /// <summary>Unfinished downloads, update scratch and Workshop content of apps that aren't installed.</summary>
+    public IReadOnlyList<Core.Steam.LeftoverFolder> Leftovers { get; init; } = [];
 
     public static readonly ToolboxState Empty = new();
 
