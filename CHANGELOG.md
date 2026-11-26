@@ -3,6 +3,13 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.7.0
+
+- Prefixes: "Back up every prefix" saves all your games' prefixes in one go (pick which), with progress and a log.
+- Prefixes: "Keep only the newest backups" deletes older backups, keeping the newest one (or 2, 3, 5) of each prefix, and lists every archive with its size first.
+- Cleanup never suggests a prefix's newest backup, however old.
+- Two backups of the same prefix in the same second no longer clash.
+
 ## 0.6.0
 
 - Faster rescans: folder sizes are remembered between scans, and only folders whose contents changed are measured again. Rescans after an action and at start use them; "Scan again" still measures everything.

@@ -699,6 +699,106 @@ public sealed class Actions
         },
     };
 
+    // ---- prefixes page ----
+
+    public IReadOnlyList<ToolAction> ForPrefixPage() => [BackupAllPrefixes(), PruneBackups()];
+
+    private ToolAction BackupAllPrefixes()
+    {
+        // Prefixes of installed games (Steam and non-Steam shortcuts); Heroic/Lutris prefixes are their launchers' business.
+        var prefixes = S.Prefixes.Where(p => !p.External && !p.Orphan).OrderBy(p => p.Owner ?? p.AppId, StringComparer.OrdinalIgnoreCase).ToList();
+        return new ToolAction
+        {
+            Id = ActionId.BackupAllPrefixes,
+            Label = "Back up every prefix",
+            Help = $"Saves each picked prefix as a .tar.gz in {_host.Backups.Dir}: saves without Steam Cloud, settings, installed runtimes. Good before a SteamOS update or a Proton switch.",
+            Unavailable = Platform.IsWindows ? NotOnWindows : prefixes.Count == 0 ? "No prefixes to back up." : null,
+            ShowsOutput = true,
+            Input = new ActionInput
+            {
+                Kind = InputKind.MultiChoice,
+                Prompt = "Back up which prefixes?",
+                Choices = prefixes.Select(p => new ActionChoice(p.Dir, $"{p.Owner ?? "App " + p.AppId} · {DiskSize.Format(p.Size)}",
+                    S.Backups.Where(b => b.AppId == p.AppId).MaxBy(b => b.Created) is { } last ? $"Last backup {last.Created.ToLocalTime():g}" : "No backup yet", true)).ToList(),
+            },
+            Run = ctx =>
+            {
+                var ids = (ctx.Input ?? "").Split('\n', StringSplitOptions.RemoveEmptyEntries).ToHashSet();
+                var picked = prefixes.Where(p => ids.Contains(p.Dir)).ToList();
+                if (picked.Count == 0)
+                {
+                    return Task.FromResult(new ActionResult("Nothing picked", Rescan: false));
+                }
+                var total = Math.Max(1, picked.Sum(p => Math.Max(1, p.Size)));
+                long done = 0;
+                long archives = 0;
+                foreach (var p in picked)
+                {
+                    ctx.Ct.ThrowIfCancellationRequested();
+                    var start = done;
+                    var weight = Math.Max(1, p.Size);
+                    var b = _host.Backups.Create(p, "all", new Relay(f => ctx.Progress.Report((start + f * weight) / total)), ctx.Ct);
+                    archives += b.ArchiveSize;
+                    done += weight;
+                    ctx.Log($"{p.Owner ?? "app " + p.AppId}: {DiskSize.Format(b.ArchiveSize)} → {b.Archive}");
+                }
+                AppLog.Info($"backed up {picked.Count} prefixes, {DiskSize.Format(archives)}");
+                return Task.FromResult(new ActionResult($"Backed up {picked.Count} prefix{(picked.Count == 1 ? "" : "es")} ({DiskSize.Format(archives)})"));
+            },
+        };
+    }
+
+    /// <summary>Backups that go when keeping the newest <paramref name="keep"/> of each prefix.</summary>
+    public static IReadOnlyList<PrefixBackup> BeyondNewest(IEnumerable<PrefixBackup> backups, int keep) =>
+        backups.GroupBy(b => b.AppId).SelectMany(g => g.OrderByDescending(b => b.Created).Skip(Math.Max(1, keep))).ToList();
+
+    private ToolAction PruneBackups()
+    {
+        int[] options = [1, 2, 3, 5];
+        return new ToolAction
+        {
+            Id = ActionId.PruneBackups,
+            Label = "Keep only the newest backups",
+            Destructive = true,
+            Help = "Deletes older prefix backups, keeping the newest of each prefix (or the newest few). Shows every archive and its size first.",
+            Unavailable = BeyondNewest(S.Backups, 1).Count == 0 ? "No prefix has more than one backup." : null,
+            Input = new ActionInput
+            {
+                Kind = InputKind.Choice,
+                Prompt = "Keep how many backups of each prefix?",
+                Choices = options.Select(n =>
+                {
+                    var gone = BeyondNewest(S.Backups, n);
+                    return new ActionChoice(n.ToString(System.Globalization.CultureInfo.InvariantCulture), n == 1 ? "The newest one" : $"The newest {n}",
+                        gone.Count == 0 ? "Nothing to delete" : $"Deletes {gone.Count} · frees {DiskSize.Format(gone.Sum(b => b.ArchiveSize))}");
+                }).ToList(),
+            },
+            Plan = (input, _) =>
+            {
+                var gone = BeyondNewest(S.Backups, int.Parse(input!, System.Globalization.CultureInfo.InvariantCulture));
+                return new ConfirmPlan
+                {
+                    Title = gone.Count == 0 ? "Nothing to delete: no prefix has more backups than that." : $"Delete {gone.Count} older backup{(gone.Count == 1 ? "" : "s")}?",
+                    Verb = $"Delete {gone.Count}",
+                    Contents = gone.Select(b => ($"{b.Owner ?? "app " + b.AppId} · {b.Created.ToLocalTime():g} · {Path.GetFileName(b.Archive)}", b.ArchiveSize)).ToList(),
+                    TotalSize = gone.Sum(b => b.ArchiveSize),
+                    Caution = "The newest backup of every prefix stays.",
+                    Paths = gone.Select(b => b.Archive).ToList(),
+                };
+            },
+            Run = ctx =>
+            {
+                var gone = BeyondNewest(_host.Backups.List(), int.Parse(ctx.Input!, System.Globalization.CultureInfo.InvariantCulture));
+                foreach (var b in gone)
+                {
+                    _host.Backups.Delete(b);
+                    ctx.Log("deleted " + b.Archive);
+                }
+                return Task.FromResult(new ActionResult(gone.Count == 0 ? "Nothing to delete" : $"Deleted {gone.Count} backup{(gone.Count == 1 ? "" : "s")}, freed {DiskSize.Format(gone.Sum(b => b.ArchiveSize))}"));
+            },
+        };
+    }
+
     public IReadOnlyList<ToolAction> ForShaderPage()
     {
         var orphans = S.ShaderCaches.Where(c => c.Orphan).ToList();

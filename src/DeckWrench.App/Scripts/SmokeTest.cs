@@ -180,6 +180,26 @@ public partial class SmokeTest : Node
         }, wait: 1.5, expect: "Cancel");
         Step("orphan-delete-cancel", () => Tap(JoyButton.B), expect: "Delete prefix");
         Step("orphan-back", () => Tap(JoyButton.B), tab: "Prefixes");
+        // Back up every prefix (all ticked except orphans), then look at keeping only the newest.
+        Step("backup-all", () =>
+        {
+            ActionButton(ActionId.BackupAllPrefixes)?.GrabFocus();
+            Tap(JoyButton.A);
+        }, wait: 1.2, expect: "Apply");
+        Step("backup-all-run", () => Tap(JoyButton.Y), wait: 4.0, expect: "Close");
+        Step("backup-all-done", () =>
+        {
+            var n = Main.Instance.Host!.Backups.List().Count;
+            Check(n >= 5, $"only {n} backups after backing up every prefix");
+            (Focusable("Back to where you were") as BaseButton)?.EmitSignal(BaseButton.SignalName.Pressed);
+        }, wait: 2.0, tab: "Prefixes");
+        Step("prune-backups", () =>
+        {
+            ActionButton(ActionId.PruneBackups)?.GrabFocus();
+            Tap(JoyButton.A);
+        }, wait: 1.2, expect: "The newest one");
+        Step("prune-backups-plan", () => Tap(JoyButton.A), wait: 1.5, expect: "Cancel");
+        Step("prune-backups-cancel", () => Tap(JoyButton.B), tab: "Prefixes");
         Step("shaders-tab", () => Key(Godot.Key.Key4, ctrl: true), tab: "Shaders");
         // Storage: drive bars and the cleanup picker.
         Step("storage-tab", () => Key(Godot.Key.Key5, ctrl: true), tab: "Storage");
@@ -300,6 +320,8 @@ public partial class SmokeTest : Node
             Check(PressInWindow("Cancel"), "no confirmation window");
             Check(Main.Instance.Host!.State.Prefixes.Any(p => p.AppId == "271590"), "cancel deleted the prefix");
         }, tab: "Prefixes");
+        Step("desktop-prune-backups", () => ActionButton(ActionId.PruneBackups)?.EmitSignal(BaseButton.SignalName.Pressed), wait: 1.0);
+        Step("desktop-prune-backups-cancel", () => Check(PressInWindow("Cancel"), "no keep-newest window"), tab: "Prefixes");
         Step("desktop-shaders", () => Key(Godot.Key.Key4, ctrl: true), tab: "Shaders");
         Step("desktop-storage", () => Key(Godot.Key.Key5, ctrl: true), tab: "Storage");
         Step("desktop-cleanup", () => ActionButton(ActionId.Cleanup)?.EmitSignal(BaseButton.SignalName.Pressed), wait: 1.0);

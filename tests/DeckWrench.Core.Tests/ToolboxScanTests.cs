@@ -82,6 +82,31 @@ public class ToolboxScanTests : IDisposable
     }
 
     [LinuxFact]
+    public async Task BackUpEveryPrefixThenKeepOnlyTheNewest()
+    {
+        var host = Host();
+        static ActionContext Ctx(string? input) => new(input, new Progress<double>(), _ => { }, CancellationToken.None);
+        var all = host.Actions.ForPrefixPage().Single(x => x.Id == ActionId.BackupAllPrefixes);
+        var picked = all.Input!.Choices.Where(c => c.Selected).Select(c => c.Id).ToList();
+        Assert.NotEmpty(picked);
+        Assert.DoesNotContain(host.State.Prefixes.Where(p => p.Orphan), p => picked.Contains(p.Dir));
+        await all.Run!(Ctx(string.Join('\n', picked)));
+        await all.Run!(Ctx(string.Join('\n', picked)));  // same second: a second archive, not a clash
+        Assert.Equal(picked.Count * 2, host.Backups.List().Count);
+
+        host.Scan();
+        var prune = host.Actions.ForPrefixPage().Single(x => x.Id == ActionId.PruneBackups);
+        Assert.Null(prune.Unavailable);
+        var plan = prune.Plan!("1", CancellationToken.None);
+        Assert.Equal(picked.Count, plan.Contents.Count);
+        Assert.True(plan.TotalSize > 0);
+        await prune.Run!(Ctx("1"));
+        var left = host.Backups.List();
+        Assert.Equal(picked.Count, left.Count);
+        Assert.Equal(picked.Count, left.Select(b => b.AppId).Distinct().Count());  // the newest of each stays
+    }
+
+    [LinuxFact]
     public void ASecondScanReusesFolderSizes()
     {
         var host = Host();  // first scan measured everything
@@ -109,6 +134,7 @@ public class ToolboxScanTests : IDisposable
         all.AddRange(a.ForShaderPage());
         all.AddRange(a.ForLogsPage());
         all.AddRange(a.ForStoragePage());
+        all.AddRange(a.ForPrefixPage());
         foreach (var g in s.Games)
         {
             all.AddRange(a.ForGame(g));

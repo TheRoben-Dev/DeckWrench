@@ -290,7 +290,9 @@ public sealed class ToolboxScanner
                 Size = l.Size,
             });
         }
-        foreach (var b in s.Backups.Where(b => b.Created < DateTime.UtcNow.AddDays(-30)))
+        // Month-old backups, but never a prefix's newest: that one is the safety net.
+        var newest = s.Backups.GroupBy(b => b.AppId).Select(g => g.MaxBy(b => b.Created)!.Archive).ToHashSet(Platform.PathComparer);
+        foreach (var b in s.Backups.Where(b => b.Created < DateTime.UtcNow.AddDays(-30) && !newest.Contains(b.Archive)))
         {
             items.Add(new CleanupItem
             {
