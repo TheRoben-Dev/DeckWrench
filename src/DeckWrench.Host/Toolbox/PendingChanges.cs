@@ -10,6 +10,9 @@ public enum PendingKind
     CompatTool,
 
     LaunchOptions,
+
+    /// <summary>Launch options of a non-Steam game, kept in shortcuts.vdf (<see cref="PendingChange.Target"/>).</summary>
+    ShortcutLaunchOptions,
 }
 
 /// <summary>A Steam setting DeckWrench will write once Steam is closed.</summary>
@@ -19,6 +22,10 @@ public sealed record PendingChange
     public required string AppId { get; init; }
     public string? Value { get; init; }
     public string Title { get; init; } = "";
+
+    /// <summary>The file the change goes to when it isn't Steam's own config (a shortcuts.vdf).</summary>
+    public string? Target { get; init; }
+
     public DateTime Queued { get; init; } = DateTime.UtcNow;
 
     public string Describe() => Kind switch
@@ -107,6 +114,9 @@ public sealed class PendingChanges
                 break;
             case PendingKind.LaunchOptions:
                 steam.SetLaunchOptions(c.AppId, c.Value ?? "");
+                break;
+            case PendingKind.ShortcutLaunchOptions:
+                ShortcutGames.SetLaunchOptions(c.Target ?? throw new InvalidOperationException($"{c.Title}: no shortcuts file recorded."), c.AppId, c.Value ?? "");
                 break;
         }
     }

@@ -447,8 +447,7 @@ public partial class LogViewerPage : Screen
         if (hints.Count > 0)
         {
             col.AddChild(Section("What it suggests"));
-            var appId = System.Text.RegularExpressions.Regex.Match(Path.GetFileName(_path), @"\d+").Value;
-            var game = Host.State.Games.FirstOrDefault(g => g.IsSteam && g.AppId == appId);
+            var game = Host.State.Games.FirstOrDefault(g => g.Log?.Path == _path);
             foreach (var h in hints)
             {
                 col.AddChild(UiTheme.Label("• " + h.Text, UiTheme.SmallSize + 2, UiTheme.Warn, wrap: true));

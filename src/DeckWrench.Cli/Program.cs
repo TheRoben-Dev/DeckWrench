@@ -56,7 +56,7 @@ internal static class Cli
                     foreach (var g in s.Games)
                     {
                         Console.WriteLine($"{g.Key,-22} {g.Title}");
-                        Console.WriteLine($"    {(g.IsSteam ? "proton: " + s.ToolLabel(g.EffectiveCompatTool) + " · " : "")}size {DiskSize.Format(g.Size)} on {g.Drive?.Label ?? "?"}" +
+                        Console.WriteLine($"    {(g.RunsInSteam ? "proton: " + s.ToolLabel(g.EffectiveCompatTool) + " · " : "")}size {DiskSize.Format(g.Size)} on {g.Drive?.Label ?? "?"}" +
                                           (g.Prefix != null ? $" · prefix {DiskSize.Format(g.Prefix.Size)}" : "") +
                                           (g.ShaderCache != null ? $" · shaders {DiskSize.Format(g.ShaderCache.Size)}" : ""));
                         if (g.EffectiveLaunchOptions.Length > 0)

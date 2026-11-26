@@ -89,7 +89,7 @@ public sealed class Actions
     public IReadOnlyList<ToolAction> ForGame(GameEntry g)
     {
         var list = new List<ToolAction>();
-        if (g.IsSteam)
+        if (g.RunsInSteam)
         {
             list.Add(SetCompatTool(g));
             list.Add(LaunchPresets(g));
@@ -100,7 +100,7 @@ public sealed class Actions
         {
             list.AddRange(ForPrefix(g.Prefix, g));
         }
-        else if (g.IsSteam && !Platform.IsWindows)
+        else if (g.RunsInSteam && !Platform.IsWindows)
         {
             list.Add(new ToolAction
             {
@@ -228,8 +228,9 @@ public sealed class Actions
         };
     }
 
-    private ActionResult SetLaunchOptions(GameEntry g, string options) =>
-        WriteSteam(new PendingChange { Kind = PendingKind.LaunchOptions, AppId = g.AppId, Value = options, Title = g.Title });
+    private ActionResult SetLaunchOptions(GameEntry g, string options) => WriteSteam(g.IsShortcut
+        ? new PendingChange { Kind = PendingKind.ShortcutLaunchOptions, AppId = g.AppId, Value = options, Title = g.Title, Target = g.Install.ShortcutsFile }
+        : new PendingChange { Kind = PendingKind.LaunchOptions, AppId = g.AppId, Value = options, Title = g.Title });
 
     /// <summary>Writes a Steam setting now when Steam is closed, else queues it.</summary>
     private ActionResult WriteSteam(PendingChange change)

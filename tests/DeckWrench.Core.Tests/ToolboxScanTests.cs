@@ -56,7 +56,7 @@ public class ToolboxScanTests : IDisposable
     public void ScanFindsGamesToolsPrefixesCachesLogsAndCleanup()
     {
         var s = Host().State;
-        Assert.Equal(["Cyberpunk 2077", "ELDEN RING", "Hades", "Stardew Valley", "Warframe"], s.Games.Select(g => g.Title).Order());
+        Assert.Equal(["Battle.net", "Cyberpunk 2077", "ELDEN RING", "Hades", "Stardew Valley", "Warframe"], s.Games.Select(g => g.Title).Order());
         Assert.Equal(2, s.Libraries.Count);
         var elden = s.Games.Single(g => g.AppId == "1245620");
         Assert.Equal("GE-Proton9-20", elden.CompatTool);
@@ -69,7 +69,7 @@ public class ToolboxScanTests : IDisposable
         Assert.Contains(s.Tools, t => t.Name == "GE-Proton9-20" && t.Removable);
         Assert.Contains(s.Tools, t => t.Name == "proton_experimental" && !t.Removable);
         Assert.DoesNotContain(s.Tools, t => t.DisplayName.Contains("Runtime", StringComparison.Ordinal));  // SLR isn't a compat tool choice
-        Assert.Single(s.GamesUsing(s.Tool("GE-Proton9-20")!));
+        Assert.Equal(2, s.GamesUsing(s.Tool("GE-Proton9-20")!).Count);  // ELDEN RING and the Battle.net shortcut
 
         Assert.Contains(s.Prefixes, p => p.AppId == "271590" && p.Orphan);
         Assert.Contains(s.ShaderCaches, p => p.AppId == "271590" && p.Orphan);
@@ -149,6 +149,42 @@ public class ToolboxScanTests : IDisposable
         await edit.Run!(new ActionContext("gamemoderun %command%", new Progress<double>(), _ => { }, CancellationToken.None));
         Assert.Equal("gamemoderun %command%", steam.LaunchOptions()[hades.AppId]);
         Assert.Empty(host.Pending.All);
+    }
+
+    [LinuxFact]
+    public async Task NonSteamShortcutsAreGamesWithProtonSettings()
+    {
+        var host = Host();
+        var s = host.State;
+        var bnet = s.Games.Single(g => g.Title == "Battle.net");
+        Assert.True(bnet.IsShortcut);
+        Assert.True(uint.Parse(bnet.AppId) >= 0x80000000u);
+        Assert.Equal("GE-Proton9-20", bnet.CompatTool);
+        Assert.NotNull(bnet.Prefix);
+        Assert.False(bnet.Prefix!.Orphan);
+        Assert.NotNull(bnet.ShaderCache);
+        Assert.NotNull(bnet.Log);  // steam-<64-bit game id>.log
+        Assert.Contains("Unhandled exception", string.Join("\n", Core.Logs.ProtonLogs.Tail(bnet.Log!.Path)));
+        Assert.Single(s.GamesUsing(s.Tool("GE-Proton9-20")!), g => g.IsShortcut);
+
+        var actions = host.Actions.ForGame(bnet);
+        Assert.Contains(actions, a => a.Id == ActionId.SetCompatTool);
+        Assert.Contains(actions, a => a.Id == ActionId.ResetPrefix);
+        Assert.DoesNotContain(actions, a => a.Id is ActionId.MoveGame or ActionId.OpenInSteam);  // no store page, not in a library folder
+
+        // Launch options go to shortcuts.vdf (Steam closed: written straight away).
+        var presets = actions.Single(a => a.Id == ActionId.ToggleProtonLog);
+        await presets.Run!(new ActionContext(null, new Progress<double>(), _ => { }, CancellationToken.None));
+        var file = Core.Steam.SteamShortcuts.Load(Path.GetDirectoryName(bnet.Install.ShortcutsFile)!);
+        Assert.Equal("PROTON_LOG=1 %command%", file.Find(uint.Parse(bnet.AppId))!.Str("LaunchOptions"));
+        Assert.True(File.Exists(bnet.Install.ShortcutsFile + ".deckwrench-bak"));
+        host.Scan();
+        Assert.Equal("PROTON_LOG=1 %command%", host.State.Games.Single(g => g.Title == "Battle.net").LaunchOptions);
+
+        // Queued while Steam runs, then applied like any other change.
+        host.Pending.Add(new PendingChange { Kind = PendingKind.ShortcutLaunchOptions, AppId = bnet.AppId, Value = "-x", Title = "Battle.net", Target = bnet.Install.ShortcutsFile });
+        Assert.Equal(1, host.ApplyPendingNow());
+        Assert.Equal("-x", Core.Steam.SteamShortcuts.Load(Path.GetDirectoryName(bnet.Install.ShortcutsFile)!).Find(uint.Parse(bnet.AppId))!.Str("LaunchOptions"));
     }
 
     [LinuxFact]

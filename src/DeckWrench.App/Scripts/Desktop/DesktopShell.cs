@@ -531,6 +531,7 @@ public partial class DesktopShell : Control, IShell
     {
         foreach (var c in _detail.GetChildren())
         {
+            _detail.RemoveChild(c);  // out of the pane now, not at the end of the frame
             c.QueueFree();
         }
         if (row == null || _section == null)

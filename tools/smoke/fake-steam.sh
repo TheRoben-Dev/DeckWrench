@@ -63,7 +63,27 @@ for v in GE-Proton9-20 GE-Proton8-25; do
   printf '"compatibilitytools"\n{\n\t"compat_tools"\n\t{\n\t\t"%s"\n\t\t{\n\t\t\t"install_path"\t\t"."\n\t\t\t"display_name"\t\t"%s"\n\t\t\t"from_oslist"\t\t"windows"\n\t\t\t"to_oslist"\t\t"linux"\n\t\t}\n\t}\n}\n' "$v" "$v" > "$t/compatibilitytool.vdf"
 done
 
+# A non-Steam game added to Steam (binary shortcuts.vdf), run with GE-Proton.
+SC_ID=$(python3 - "$STEAM/userdata/12345678/config/shortcuts.vdf" "$H/Games/Battle.net" <<'PY'
+import struct, sys, zlib
+out, start = sys.argv[1], sys.argv[2]
+exe = '"%s/Battle.net Launcher.exe"' % start
+name = "Battle.net"
+appid = zlib.crc32((exe + name).encode()) | 0x80000000
+def s(k, v): return b"\x01" + k.encode() + b"\x00" + v.encode() + b"\x00"
+def i(k, v): return b"\x02" + k.encode() + b"\x00" + struct.pack("<I", v)
+entry = i("appid", appid) + s("AppName", name) + s("Exe", exe) + s("StartDir", '"%s"' % start) + s("LaunchOptions", "") + b"\x00tags\x00\x08"
+data = b"\x00shortcuts\x00" + b"\x000\x00" + entry + b"\x08" + b"\x08" + b"\x08"
+open(out, "wb").write(data)
+print(appid)
+PY
+)
+mkdir -p "$H/Games/Battle.net"
+sized "$H/Games/Battle.net/Battle.net Launcher.exe" 80M
+
 prefix "$STEAM" 1245620 "GE-Proton9-20" 12M
+prefix "$STEAM" "$SC_ID" "GE-Proton9-20" 1M
+shaders "$STEAM" "$SC_ID" 50M
 prefix "$STEAM" 1091500 "9.0-203" 40M
 prefix "$SD" 1145360 "experimental-9.0-20241121" 2M
 prefix "$STEAM" 230410 "9.0-203" 8M
@@ -99,6 +119,12 @@ cat > "$STEAM/config/config.vdf" <<VDF
 					"1145360"
 					{
 						"name"		"proton_9"
+						"config"		""
+						"priority"		"250"
+					}
+					"$SC_ID"
+					{
+						"name"		"GE-Proton9-20"
 						"config"		""
 						"priority"		"250"
 					}
@@ -144,6 +170,11 @@ VDF
   echo "1240.300:0020:0024:err:module:import_dll Library d3dx9_43.dll (which is needed by L\"Z:\\\\launcher.exe\") not found"
   echo "1240.400:0020:0024:err:module:LdrInitializeThunk Importing dlls for L\"Z:\\\\eldenring.exe\" failed, status c0000135"
 } > "$H/steam-1245620.log"
+# Proton names a non-Steam game's log by its 64-bit game id.
+{
+  echo "Proton: 1732000000 GE-Proton9-20"
+  echo "1300.000:0030:0034:err:seh:NtRaiseException Unhandled exception code c0000005 flags 0 addr 0x140001000"
+} > "$H/steam-$(python3 -c "print(($SC_ID << 32) | 0x02000000)").log"
 
 if [ -d "$ROOT/tools/smoke/fixtures" ]; then
   for id in 1245620 1091500 413150; do

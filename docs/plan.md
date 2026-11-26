@@ -18,6 +18,8 @@ screenshots, Linux and Windows exports).
 
 ## Phase 2: hardening on real hardware
 
+- Done: non-Steam shortcuts as games (Proton, prefix, shader cache, log, launch options in shortcuts.vdf).
+
 - Run on a Steam Deck (SteamOS stable and beta) and Bazzite; fix what real libraries show up.
 - Steam's own mover from Game Mode (`steam://` deep links) where it exists for the running client.
 - Non-Steam shortcuts (Heroic/Lutris launched through Steam): their compatdata, names and art.

@@ -18,6 +18,12 @@ public sealed record GameEntry
 
     public bool IsSteam => Install.Source == GameSource.Steam;
 
+    /// <summary>A non-Steam game added to Steam: Proton settings like a Steam game, but no store page or mover.</summary>
+    public bool IsShortcut => Install.Source == GameSource.SteamShortcut;
+
+    /// <summary>Steam runs it, so it has a compatibility tool, Steam launch options and a compatdata prefix.</summary>
+    public bool RunsInSteam => IsSteam || IsShortcut;
+
     public string AppId => Install.SourceId;
 
     /// <summary>Compatibility tool set for this game in Steam (null = Steam's default).</summary>
@@ -138,7 +144,7 @@ public sealed record ToolboxState
 
     /// <summary>Steam games that use <paramref name="tool"/> explicitly (pending changes counted).</summary>
     public IReadOnlyList<GameEntry> GamesUsing(CompatTool tool) =>
-        Games.Where(g => g.IsSteam && string.Equals(g.EffectiveCompatTool, tool.Name, StringComparison.OrdinalIgnoreCase)).ToList();
+        Games.Where(g => g.RunsInSteam && string.Equals(g.EffectiveCompatTool, tool.Name, StringComparison.OrdinalIgnoreCase)).ToList();
 
     /// <summary>Readable name for a tool id (installed or not); "Steam default" for null.</summary>
     public string ToolLabel(string? name) =>
