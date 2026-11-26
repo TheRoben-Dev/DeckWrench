@@ -56,6 +56,7 @@ public sealed class ToolboxScanner
             if (!Platform.IsWindows)
             {
                 installs.AddRange(new LutrisScanner(home).Scan());
+                installs.AddRange(ShortcutGames.Scan(home, root));
             }
         }
         catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException or System.Text.Json.JsonException)
@@ -73,6 +74,10 @@ public sealed class ToolboxScanner
             owners[g.SourceId] = g.Title;
         }
         var shortcutIds = shortcuts.Keys.ToHashSet();
+        foreach (var (id, name) in shortcuts)
+        {
+            owners.TryAdd(ShortcutGames.GameId(id), name);  // Proton names a shortcut's log by its game id
+        }
 
         var tools = root != null ? CompatToolScanner.Scan(root, libraries) : [];
         tools = tools.Select(t => t with { Size = DiskSize.Of(t.Dir, ct) }).ToList();
@@ -108,7 +113,8 @@ public sealed class ToolboxScanner
                 continue;
             }
             AppFolder? prefix = null;
-            if (g.Source == GameSource.Steam)
+            var inSteam = g.Source is GameSource.Steam or GameSource.SteamShortcut;
+            if (inSteam)
             {
                 prefix = prefixes.FirstOrDefault(p => p.AppId == g.SourceId);
             }
@@ -132,14 +138,15 @@ public sealed class ToolboxScanner
             games.Add(new GameEntry
             {
                 Install = g,
-                CompatTool = g.Source == GameSource.Steam ? mapping.GetValueOrDefault(g.SourceId) : null,
+                CompatTool = inSteam ? mapping.GetValueOrDefault(g.SourceId) : null,
                 Prefix = prefix,
-                ShaderCache = g.Source == GameSource.Steam ? shaders.FirstOrDefault(s => s.AppId == g.SourceId) : null,
+                ShaderCache = inSteam ? shaders.FirstOrDefault(s => s.AppId == g.SourceId) : null,
                 LaunchOptions = g.LaunchOptions ?? "",
-                Log = g.Source == GameSource.Steam ? logs.FirstOrDefault(l => l.AppId == g.SourceId) : null,
+                Log = g.Source == GameSource.Steam ? logs.FirstOrDefault(l => l.AppId == g.SourceId)
+                    : g.Source == GameSource.SteamShortcut ? logs.FirstOrDefault(l => l.AppId == g.SourceId || l.AppId == ShortcutGames.GameId(g.SourceId)) : null,
                 Size = size,
                 Drive = DriveOf(g.InstallDir),
-                Pending = g.Source == GameSource.Steam ? pending.Where(p => p.AppId == g.SourceId).ToList() : [],
+                Pending = inSteam ? pending.Where(p => p.AppId == g.SourceId).ToList() : [],
             });
         }
         games = games.OrderBy(g => g.Title, StringComparer.OrdinalIgnoreCase).ToList();

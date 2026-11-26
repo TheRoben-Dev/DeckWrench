@@ -461,9 +461,8 @@ public static class DesktopDialogs
             col.AddThemeConstantOverride("separation", 6);
             box.AddChild(col);
             col.AddChild(Text("What it suggests", DesktopTheme.Small, UiTheme.Dim));
-            var appId = System.Text.RegularExpressions.Regex.Match(Path.GetFileName(path), @"\d+").Value;
             var host = Main.Instance.Host!;
-            var game = host.State.Games.FirstOrDefault(g => g.IsSteam && g.AppId == appId);
+            var game = host.State.Games.FirstOrDefault(g => g.Log?.Path == path);
             foreach (var h in hints)
             {
                 var r = new HBoxContainer();

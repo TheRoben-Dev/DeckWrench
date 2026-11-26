@@ -19,6 +19,7 @@ for mouse and keyboard.
 | Area | What you can do |
 | --- | --- |
 | **Proton** | Every installed Proton (Valve, Experimental, Hotfix), GE-Proton and system build, with size and which games use it. Set a game's compatibility tool or the global default. Download GE-Proton from GitHub (SHA-512 checked) and remove custom builds. |
+| **Non-Steam games** | Shortcuts you added to Steam (Battle.net, emulators…) appear under Games with their Proton, prefix, shader cache, log and launch options (written to `shortcuts.vdf`). |
 | **Prefixes** | Open, back up (`.tar.gz`), restore, reset (always backs up first) or delete a game's `compatdata` prefix. Run curated protontricks verbs (Visual C++, .NET, DirectX extras, fonts, Windows version). Orphaned prefixes of uninstalled games are flagged. Heroic and Lutris prefixes are listed too. |
 | **Shader cache** | Size per game, clear one, clear all orphans or clear everything. |
 | **Storage** | Per-drive breakdown (games, prefixes, shader caches, Proton versions, backups, everything else). Move a game between internal storage and the SD card (through Steam's own mover while Steam runs, or DeckWrench's own copy-verify-swap when it's closed). A cleanup list with what each item frees. |

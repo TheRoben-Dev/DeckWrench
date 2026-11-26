@@ -9,6 +9,9 @@ public enum GameSource
     Gog,
     Amazon,
     Lutris,
+
+    /// <summary>A non-Steam game added to Steam (shortcuts.vdf): Battle.net, emulators, anything else.</summary>
+    SteamShortcut,
 }
 
 /// <summary>One installed game as a launcher records it, before matching against the support profiles.</summary>
@@ -50,4 +53,7 @@ public sealed record InstalledGame
 
     /// <summary>Where the launcher itself is installed from: "native" or "flatpak".</summary>
     public string Packaging { get; init; } = "native";
+
+    /// <summary>The shortcuts.vdf that holds a non-Steam game (its launch options are kept there).</summary>
+    public string? ShortcutsFile { get; init; }
 }

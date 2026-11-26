@@ -20,8 +20,10 @@ public sealed class GamesSection : Section
         get
         {
             var steam = S.Games.Count(g => g.IsSteam);
-            var other = S.Games.Count - steam;
-            return Plural(steam, "Steam game") + (other > 0 ? $", {Plural(other, "game")} from Heroic and Lutris" : "") +
+            var shortcuts = S.Games.Count(g => g.IsShortcut);
+            var other = S.Games.Count - steam - shortcuts;
+            return Plural(steam, "Steam game") + (shortcuts > 0 ? $", {Plural(shortcuts, "non-Steam game")}" : "") +
+                   (other > 0 ? $", {Plural(other, "game")} from Heroic and Lutris" : "") +
                    (S.Pending.Count > 0 ? $" · {Plural(S.Pending.Count, "change")} waiting for Steam to restart" : "");
         }
     }
@@ -32,7 +34,7 @@ public sealed class GamesSection : Section
         Title = g.Title,
         Detail = string.Join(" · ", new[]
         {
-            g.IsSteam ? S.ToolLabel(g.EffectiveCompatTool) : SourceName(g.Install),
+            g.RunsInSteam ? S.ToolLabel(g.EffectiveCompatTool) : SourceName(g.Install),
             g.Drive?.Label,
             DiskSize.Format(g.Size),
         }.Where(x => !string.IsNullOrEmpty(x))),
@@ -42,7 +44,7 @@ public sealed class GamesSection : Section
         Cells =
         [
             g.Title,
-            g.IsSteam ? new Cell(S.ToolLabel(g.EffectiveCompatTool) + (g.Pending.Count > 0 ? " *" : ""), S.ToolLabel(g.EffectiveCompatTool)) : new Cell(SourceName(g.Install), "~"),
+            g.RunsInSteam ? new Cell(S.ToolLabel(g.EffectiveCompatTool) + (g.Pending.Count > 0 ? " *" : ""), S.ToolLabel(g.EffectiveCompatTool)) : new Cell(SourceName(g.Install), "~"),
             new Cell(g.EffectiveLaunchOptions, g.EffectiveLaunchOptions, Tone.Dim),
             g.Drive?.Label ?? "",
             Cell.Size(g.Size),
@@ -59,6 +61,7 @@ public sealed class GamesSection : Section
         GameSource.Epic => "Heroic (Epic)",
         GameSource.Gog => "Heroic (GOG)",
         GameSource.Amazon => "Heroic (Amazon)",
+        GameSource.SteamShortcut => "Non-Steam game in Steam",
         _ => i.Source.ToString(),
     };
 
@@ -67,12 +70,12 @@ public sealed class GamesSection : Section
         var g = (GameEntry)item;
         var facts = new List<Fact>
         {
-            new("Source", SourceName(g.Install) + (g.IsSteam ? $" · app {g.AppId}" : "")),
+            new("Source", SourceName(g.Install) + (g.RunsInSteam ? $" · app {g.AppId}" : "")),
             new("Installed in", g.Install.InstallDir),
             new("Drive", g.Drive != null ? $"{g.Drive.Label} · {DiskSize.Format(g.Drive.Free)} free" : "?"),
             new("Size", DiskSize.Format(g.Size)),
         };
-        if (g.IsSteam)
+        if (g.RunsInSteam)
         {
             facts.Add(new("Proton", S.ToolLabel(g.EffectiveCompatTool), g.EffectiveCompatTool != null && S.Tool(g.EffectiveCompatTool) == null ? Tone.Warn : Tone.Accent));
             facts.Add(new("Launch options", g.EffectiveLaunchOptions.Length > 0 ? g.EffectiveLaunchOptions : "(none)", g.EffectiveLaunchOptions.Length > 0 ? Tone.Normal : Tone.Dim));
@@ -396,7 +399,7 @@ public sealed class LogsSection : Section
         Detail = $"{l.Modified.ToLocalTime():g} · {DiskSize.Format(l.Size)}",
         Status = DiskSize.Format(l.Size),
         StatusTone = l.Size > 100 << 20 ? Tone.Warn : Tone.Dim,
-        Cells = [l.Owner ?? $"App {l.AppId}", new Cell(l.AppId, long.Parse(l.AppId)), Cell.Date(l.Modified), Cell.Size(l.Size, l.Size > 100 << 20 ? Tone.Warn : Tone.Normal)],
+        Cells = [l.Owner ?? $"App {l.AppId}", new Cell(l.AppId, ulong.TryParse(l.AppId, out var id) ? id : 0UL)  /* a shortcut's game id needs all 64 bits */, Cell.Date(l.Modified), Cell.Size(l.Size, l.Size > 100 << 20 ? Tone.Warn : Tone.Normal)],
         Item = l,
     }).ToList();
 

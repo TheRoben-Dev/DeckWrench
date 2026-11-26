@@ -21,6 +21,7 @@ public partial class SmokeTest : Node
 
     private const string Elden = "1245620";
     private IReadOnlyList<string> _controllerActions = [];
+    private IReadOnlyList<string> _shortcutActions = [];
 
     public SmokeTest(string outDir)
     {
@@ -33,11 +34,11 @@ public partial class SmokeTest : Node
         Step("scan-found-everything", () =>
         {
             var st = Main.Instance.Host!.State;
-            Check(st.Games.Count == 5, $"expected 5 games, found {st.Games.Count}");
+            Check(st.Games.Count == 6, $"expected 6 games (one a non-Steam shortcut), found {st.Games.Count}");
             Check(st.Tools.Any(t => t.Name == "GE-Proton9-20"), "GE-Proton9-20 not found");
             Check(st.Prefixes.Any(p => p.Orphan), "the orphaned prefix wasn't flagged");
             Check(st.ShaderCaches.Any(p => p.Orphan), "the orphaned shader cache wasn't flagged");
-            Check(st.Logs.Count == 1, "the Proton log wasn't found");
+            Check(st.Logs.Count == 2, "the Proton logs weren't found");
             Check(st.Reclaimable > 0, "nothing to clean up");
             Focusable("ELDEN RING:")?.GrabFocus();
         }, expect: "ELDEN RING:", tab: "Games");
@@ -83,6 +84,18 @@ public partial class SmokeTest : Node
         Step("prefix-reset-cancel", () => Tap(JoyButton.B), wait: 0.8, expect: "Reset prefix");
         Step("prefix-reset-kept", () => Check(Directory.Exists(Main.Instance.Host!.State.Games.First(x => x.AppId == Elden).Prefix!.Dir), "cancel removed the prefix"));
         Step("game-back", () => Tap(JoyButton.B), expect: "ELDEN RING:", tab: "Games");
+        // A non-Steam game added to Steam has the same Proton tools (minus the store page and mover).
+        Step("shortcut-page", () =>
+        {
+            Focusable("Battle.net:")?.GrabFocus();
+            Tap(JoyButton.A);
+        }, wait: 1.2, expect: "Proton: GE-Proton9-20");
+        Step("shortcut-parity", () =>
+        {
+            _shortcutActions = ActionIds();
+            Check(!_shortcutActions.Contains(nameof(ActionId.MoveGame)), "a shortcut offers Move");
+        });
+        Step("shortcut-back", () => Tap(JoyButton.B), expect: "Battle.net:", tab: "Games");
         // Bumpers go through every tab and wrap.
         Step("tab-proton", () => Tap(JoyButton.RightShoulder), tab: "Proton");
         Step("tab-prefixes", () => Tap(JoyButton.RightShoulder), tab: "Prefixes");
@@ -180,6 +193,13 @@ public partial class SmokeTest : Node
             Check(desktop.SequenceEqual(_controllerActions),
                 $"actions differ between modes: controller [{string.Join(", ", _controllerActions)}], desktop [{string.Join(", ", desktop)}]");
         });
+        Step("desktop-shortcut-parity", () =>
+        {
+            Check(Desktop.SelectRow("Battle.net"), "Battle.net isn't in the table");
+            var desktop = ActionIds(Desktop.DetailPane);
+            Check(desktop.SequenceEqual(_shortcutActions),
+                $"shortcut actions differ between modes: controller [{string.Join(", ", _shortcutActions)}], desktop [{string.Join(", ", desktop)}]");
+        }, tab: "Games");
         Step("desktop-sort-size", () =>
         {
             var size = Main.Instance.Host!.State.Games.Count > 0 ? Section.Get("Games").Columns.ToList().IndexOf("Size") : -1;
