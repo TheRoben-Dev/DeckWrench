@@ -76,8 +76,12 @@ public sealed class PrefixBackups
         }
         Directory.CreateDirectory(Dir);
         var created = DateTime.UtcNow;
-        var name = $"{prefix.AppId}_{created.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture)}.tar.gz";
-        var archive = Path.Combine(Dir, name);
+        var stem = $"{prefix.AppId}_{created.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture)}";
+        var archive = Path.Combine(Dir, stem + ".tar.gz");
+        for (var n = 2; File.Exists(archive) || File.Exists(archive + ".part"); n++)
+        {
+            archive = Path.Combine(Dir, $"{stem}-{n}.tar.gz");  // two backups in the same second
+        }
         var total = Math.Max(1, prefix.Size > 0 ? prefix.Size : DiskSize.Of(prefix.Dir, ct));
         var tmp = archive + ".part";
         try

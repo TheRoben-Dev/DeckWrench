@@ -37,6 +37,8 @@ public enum ActionId
     RunTricks,
     RunTypedTricks,
     DeleteBackup,
+    BackupAllPrefixes,
+    PruneBackups,
 
     // Shader caches
     ClearShaderCache,

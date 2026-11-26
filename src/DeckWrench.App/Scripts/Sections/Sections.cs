@@ -182,6 +182,8 @@ public sealed class PrefixesSection : Section
     public override (int Column, bool Descending) DefaultSort => (4, true);
     public override string EmptyText => Platform.IsWindows ? "Prefixes are a Linux thing: on Windows games run directly." : "No Proton prefixes yet. Steam makes one the first time a game runs with Proton.";
 
+    public override IReadOnlyList<ToolAction> PageActions => Host.Actions.ForPrefixPage();
+
     private static IEnumerable<AppFolder> AllPrefixes =>
         S.Prefixes.Concat(S.Games.Where(g => g.Prefix is { External: true }).Select(g => g.Prefix!));
 
