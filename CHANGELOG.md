@@ -3,6 +3,10 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.10.0
+
+- Cleanup finds Steam's leftovers of games that aren't installed any more: unfinished downloads (steamapps/downloading), update scratch (steamapps/temp) and Workshop items (steamapps/workshop/content). Folders of installed games are never listed.
+
 ## 0.9.0
 
 - Proton: "Use for games" on any Proton version ticks the games that run with it; tick more to switch them over in one go, untick one to set it back to Steam's default. Handy after installing a new GE-Proton.
