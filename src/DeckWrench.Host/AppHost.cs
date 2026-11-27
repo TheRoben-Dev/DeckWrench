@@ -43,6 +43,9 @@ public sealed record AppSettings
     /// <summary>Check GitHub Releases for a new DeckWrench version at startup.</summary>
     public bool CheckForUpdates { get; init; } = true;
 
+    /// <summary>Look up ProtonDB tiers and Steam Deck ratings of installed Steam games (sends their app ids to ProtonDB and Steam).</summary>
+    public bool OnlineRatings { get; init; } = true;
+
     /// <summary>Last app version whose "What's new" was shown; null on a fresh install.</summary>
     public string? LastSeenVersion { get; init; }
 
@@ -73,6 +76,9 @@ public sealed class AppHost
 
     /// <summary>Folder sizes remembered between scans; "Scan again" forgets them.</summary>
     public SizeCache Sizes { get; }
+
+    /// <summary>ProtonDB tiers and Steam Deck ratings, cached for a few days.</summary>
+    public Core.Compat.CompatReports Compat { get; }
     public Actions Actions { get; }
 
     private readonly ToolboxScanner _scanner;
@@ -98,6 +104,7 @@ public sealed class AppHost
         Notes = new GameNotes(Path.Combine(Paths.Config, "notes.json"));
         Backups = new PrefixBackups(Path.Combine(Paths.Data, "backups", "prefixes"));
         Sizes = new SizeCache(Path.Combine(Paths.Cache, "sizes.json"));
+        Compat = new Core.Compat.CompatReports(Path.Combine(Paths.Cache, "ratings.json"), Http);
         _scanner = new ToolboxScanner(Paths, Pending, Backups, Sizes);
         Actions = new Actions(this);
     }
@@ -110,9 +117,28 @@ public sealed class AppHost
         AppLog.Info($"scan: {(DateTime.UtcNow - started).TotalMilliseconds:0} ms, folder sizes {Sizes.Hits} remembered, {Sizes.Misses} measured");
         Sizes.Save();
         State = state;
-        Findings = Checkup.Run(state, Actions);
+        Findings = Checkup.Run(state, Actions, ratings: Compat.Get);
         StateChanged?.Invoke();
         return state;
+    }
+
+    /// <summary>
+    /// Fetches ratings of Steam games that have none or an old one (when online ratings are on).
+    /// Returns how many changed; the caller refreshes the UI when it's more than zero.
+    /// </summary>
+    public async Task<int> RefreshRatings(CancellationToken ct = default)
+    {
+        if (!Settings.OnlineRatings)
+        {
+            return 0;
+        }
+        var stale = Compat.Stale(State.Games.Where(g => g.IsSteam).Select(g => g.AppId), DateTime.UtcNow);
+        var changed = await Compat.Refresh(stale, ct).ConfigureAwait(false);
+        if (changed > 0)
+        {
+            Findings = Checkup.Run(State, Actions, ratings: Compat.Get);
+        }
+        return changed;
     }
 
     /// <summary>The `deckwrench` helper next to the app (release builds), or null when running from source.</summary>

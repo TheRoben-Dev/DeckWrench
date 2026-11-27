@@ -50,11 +50,16 @@ cat > "$API/releases.json" <<'JSON'
   "assets": [{"name": "GE-Proton9-20.tar.gz", "browser_download_url": "http://127.0.0.1:1/GE-Proton9-20.tar.gz", "size": 498000000}]}
 ]
 JSON
+mkdir -p "$API/protondb" "$API/deck"
+echo '{"tier":"gold","trendingTier":"platinum","total":2140,"confidence":"strong"}' > "$API/protondb/1245620.json"
+echo '{"success":1,"results":{"resolved_category":2,"resolved_items":[{"display_type":3,"loc_token":"#SteamDeckVerified_TestResult_SomeInGameTextSmall"}]}}' > "$API/deck/1245620.json"
 PORT=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')
 python3 -m http.server "$PORT" --bind 127.0.0.1 --directory "$API" >/dev/null 2>&1 &
 API_PID=$!
 trap 'kill $API_PID 2>/dev/null; rm -rf "$WORK"' EXIT
 export DECKWRENCH_GE_API="http://127.0.0.1:$PORT/releases.json"
+# Stand-ins for ProtonDB's summary and Steam's Deck compatibility report (only ELDEN RING has them).
+export DECKWRENCH_PROTONDB_API="http://127.0.0.1:$PORT/protondb/{0}.json" DECKWRENCH_DECK_API="http://127.0.0.1:$PORT/deck/{0}.json"
 for _ in $(seq 50); do curl -sf "$DECKWRENCH_GE_API" >/dev/null && break; sleep 0.1; done
 
 cd "$ROOT/src/DeckWrench.App"

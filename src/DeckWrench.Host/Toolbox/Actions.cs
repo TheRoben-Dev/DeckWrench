@@ -110,6 +110,7 @@ public sealed class Actions
         if (g.RunsInSteam)
         {
             list.Add(SetCompatTool(g));
+            list.Add(TryOtherProton(g));
             list.Add(LaunchPresets(g));
             list.Add(EditLaunchOptions(g));
             list.Add(CopyLaunchOptions(g));
@@ -237,6 +238,39 @@ public sealed class Actions
                 Value = string.IsNullOrEmpty(ctx.Input) ? null : ctx.Input,
                 Title = g.Title,
             })),
+        };
+    }
+
+    /// <summary>
+    /// The usual next Proton to try when a game misbehaves: the newest GE-Proton for a game on
+    /// Valve's Proton (or the default), Proton Experimental for one on GE-Proton, else the newest
+    /// installed Proton that isn't the current one. Null when nothing else is installed.
+    /// </summary>
+    public static CompatTool? NextProtonToTry(ToolboxState s, GameEntry g)
+    {
+        var current = g.EffectiveCompatTool ?? s.DefaultTool;
+        var others = s.Tools.Where(t => !string.Equals(t.Name, current, StringComparison.OrdinalIgnoreCase) && t.Kind != CompatToolKind.System
+            && !t.Name.Contains("runtime", StringComparison.OrdinalIgnoreCase)).ToList();
+        var onGe = current != null && current.StartsWith("GE-Proton", StringComparison.OrdinalIgnoreCase);
+        return (onGe ? others.FirstOrDefault(t => t.IsExperimental) : others.Where(t => t.IsGe).MaxBy(ProtonNames.SortKey))
+            ?? others.FirstOrDefault(t => t.IsExperimental)
+            ?? others.MaxBy(ProtonNames.SortKey);
+    }
+
+    private ToolAction TryOtherProton(GameEntry g)
+    {
+        var next = NextProtonToTry(S, g);
+        var from = S.ToolLabel(g.EffectiveCompatTool);
+        return new ToolAction
+        {
+            Id = ActionId.TryOtherProton,
+            Label = next != null ? $"Try {next.DisplayName}" : "Try another Proton",
+            Help = next == null ? "" : $"The usual next step when a game won't start or crashes: switches it from {from} to {next.DisplayName}. "
+                + "Its prefix and saves stay. Switch back any time with \"Proton:\" above."
+                + (next.IsGe ? "" : " Download a GE-Proton from the Proton tab for one more option."),
+            Unavailable = Platform.IsWindows ? NotOnWindows : S.SteamRoot == null ? "Steam isn't installed."
+                : next == null ? "No other Proton is installed. Download GE-Proton from the Proton tab." : null,
+            Run = _ => Task.FromResult(WriteSteam(new PendingChange { Kind = PendingKind.CompatTool, AppId = g.AppId, Value = next!.Name, Title = g.Title })),
         };
     }
 
