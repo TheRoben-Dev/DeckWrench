@@ -109,15 +109,22 @@ public partial class SectionScreen : Screen, IStateView
             }
         }
         var page = _section.PageActions;
-        if (page.Count > 0)
+        void AddPageActions()
         {
-            col.AddChild(Section("Actions"));
-            foreach (var a in page)
+            if (page.Count > 0)
             {
-                var b = Rows.Action(a, () => Main.Instance.Shell);
-                col.AddChild(b);
-                items.Add(b);
+                col.AddChild(Section(_section.PageActionsTitle));
+                foreach (var a in page)
+                {
+                    var b = Rows.Action(a, () => Main.Instance.Shell);
+                    col.AddChild(b);
+                    items.Add(b);
+                }
             }
+        }
+        if (!_section.PageActionsLast)
+        {
+            AddPageActions();
         }
 
         if (Host.State.ScannedAt == default)
@@ -156,6 +163,10 @@ public partial class SectionScreen : Screen, IStateView
                     reopen = row;
                 }
             }
+        }
+        if (_section.PageActionsLast)
+        {
+            AddPageActions();
         }
         Focus.Column(items);
         Anim.Stagger(items);

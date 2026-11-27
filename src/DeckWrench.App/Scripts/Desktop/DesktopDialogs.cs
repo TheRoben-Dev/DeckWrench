@@ -250,7 +250,7 @@ public static class DesktopDialogs
     {
         var (w, body) = Open(owner, "Edit", new Vector2I(720, 220));
         body.AddChild(Text(input.Prompt));
-        var field = new LineEdit { Text = input.Initial, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, PlaceholderText = "(empty)" };
+        var field = new LineEdit { Text = input.Initial, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, PlaceholderText = "(empty)", Secret = input.Secret };
         body.AddChild(field);
         body.AddChild(new Control { SizeFlagsVertical = Control.SizeFlags.ExpandFill });
         var row = ButtonRow(body);

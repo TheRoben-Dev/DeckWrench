@@ -125,6 +125,7 @@ public partial class TextInputPage : Screen
         _field = new LineEdit
         {
             Text = _text,
+            Secret = _input.Secret,
             CustomMinimumSize = new Vector2(0, 58),
             PlaceholderText = "Type here",
             TooltipText = "A or a tap opens Steam's keyboard in Game Mode (Steam + X anywhere). Enter saves.",

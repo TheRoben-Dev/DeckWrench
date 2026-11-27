@@ -199,11 +199,39 @@ jobs:
           Start-Sleep -Seconds 5
           if (Test-Path "$dest/DeckWrench.exe") { throw 'not uninstalled' }
 
+  decky:
+    name: Decky Loader plugin (typecheck, build, package)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build
+        working-directory: decky
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run typecheck
+          pnpm run build
+          python3 -m py_compile main.py
+          # The plugin's version follows the app's.
+          v=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' ../Directory.Build.props)
+          grep -q "\"version\": \"$v\"" package.json || { echo "decky/package.json version isn't $v"; exit 1; }
+      - name: Package
+        run: tools/release/package-decky.sh decky dist-decky
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DeckWrench-decky
+          path: dist-decky/DeckWrench-decky.zip
+
   release:
     # Every push to main whose version (Directory.Build.props) has no release yet publishes one:
     # the tarball and checksums the in-app updater reads, with that version's changelog as notes.
     name: Publish release
-    needs: [dotnet, app, windows]
+    needs: [dotnet, app, windows, decky]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     permissions:
@@ -228,6 +256,11 @@ jobs:
         with:
           name: DeckWrench-windows-x86_64
           path: build/godot-windows
+      - uses: actions/download-artifact@v4
+        if: steps.v.outputs.exists == 'false'
+        with:
+          name: DeckWrench-decky
+          path: dist
       - name: Package
         if: steps.v.outputs.exists == 'false'
         run: |
@@ -241,7 +274,7 @@ jobs:
       - name: Publish
         if: steps.v.outputs.exists == 'false'
         run: |
-          gh release create "v${{ steps.v.outputs.version }}" dist/DeckWrench-linux-x86_64.tar.gz dist/DeckWrench-windows-x86_64.zip dist/SHA256SUMS tools/release/Install-DeckWrench.desktop \
+          gh release create "v${{ steps.v.outputs.version }}" dist/DeckWrench-linux-x86_64.tar.gz dist/DeckWrench-windows-x86_64.zip dist/SHA256SUMS dist/DeckWrench-decky.zip tools/release/Install-DeckWrench.desktop \
             --target "$GITHUB_SHA" --title "DeckWrench ${{ steps.v.outputs.version }}" --notes-file dist/notes.md
         env:
           GH_TOKEN: ${{ github.token }}

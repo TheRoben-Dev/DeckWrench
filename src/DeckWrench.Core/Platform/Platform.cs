@@ -25,6 +25,26 @@ public static class Platform
     /// <summary>The command line helper (`deckwrench`) next to it; deckwrench-cli.exe on Windows, where deckwrench.exe would clash with DeckWrench.exe.</summary>
     public static string CliBinary => IsWindows ? "deckwrench-cli.exe" : "deckwrench";
 
+    /// <summary>The distribution's id from /etc/os-release ("steamos", "bazzite", "arch"...), or null.</summary>
+    public static string? DistroId { get; } = ReadDistroId();
+
+    /// <summary>SteamOS or Bazzite: where the memory tuning applies.</summary>
+    public static bool IsGamingDistro => DistroId is "steamos" or "bazzite" || (DistroId?.Contains("bazzite", StringComparison.Ordinal) ?? false);
+
+    private static string? ReadDistroId()
+    {
+        try
+        {
+            return !IsWindows && File.Exists("/etc/os-release")
+                ? File.ReadLines("/etc/os-release").FirstOrDefault(l => l.StartsWith("ID=", StringComparison.Ordinal))?[3..].Trim('"').ToLowerInvariant()
+                : null;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
     /// <summary>True while a process with this id is running.</summary>
     public static bool ProcessAlive(int pid)
     {

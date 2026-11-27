@@ -36,6 +36,6 @@ screenshots, Linux and Windows exports).
 
 1. ~~First impression: a Home checkup page, README pitch, one-line installer.~~ Done in 0.12.0.
 2. ~~"Fix my game": ProtonDB tier and Deck Verified status on a game's page, with try-next steps.~~ Done in 0.13.0.
-3. Save backup and restore (Ludusavi's manifest), automatic before prefix resets and deletes.
-4. System tuning presets: swap size, swappiness, transparent huge pages, compaction, with a revert.
-5. A Decky Loader companion for the Quick Access menu.
+3. ~~Save backup and restore (Ludusavi's manifest), automatic before prefix resets and deletes.~~ Done in 0.14.0.
+4. ~~System tuning presets: swap size, swappiness, transparent huge pages, compaction, with a revert.~~ Done in 0.14.0 (needs a real Deck check).
+5. ~~A Decky Loader companion for the Quick Access menu.~~ Done in 0.14.0 (needs a real Deck check).

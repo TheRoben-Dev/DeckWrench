@@ -19,6 +19,13 @@ internal static class Cli
           deckwrench settings                 print the settings file path and contents
           deckwrench checkup                  what needs attention: broken Proton settings, crashes
                                               in logs, full drives, space to free, missing backups
+          deckwrench saves [game]             where each game's save files are (one game: by app id
+                                              or name)
+          deckwrench backup-saves [game]      back up the saves of one game, or of every game
+          deckwrench tune [status|apply [--swap-mb N]|revert]
+                                              memory tuning for games (apply and revert need root)
+          deckwrench status --json            Home's findings, drives and pending Steam changes as
+                                              JSON (for the Decky Loader plugin)
           deckwrench games                    installed games: Proton, prefix, shader cache, size
           deckwrench proton                   installed compatibility tools and the games using them
           deckwrench prefixes [--orphans]     Proton prefixes (only orphaned ones with --orphans)
@@ -69,6 +76,110 @@ internal static class Cli
                         }
                     }
                     return host.Findings.Any(f => f.Level == FindingLevel.Problem) ? 1 : 0;
+                }
+                case "saves":
+                case "backup-saves":
+                {
+                    var s = host.Scan();
+                    var games = host.Actions.SaveCandidates()
+                        .Where(g => args.Length < 2 || g.AppId == args[1] || g.Title.Contains(args[1], StringComparison.OrdinalIgnoreCase)).ToList();
+                    if (games.Count == 0)
+                    {
+                        Console.Error.WriteLine("No such game.");
+                        return 1;
+                    }
+                    var started = DateTime.UtcNow;
+                    host.Saves.Manifest().GetAwaiter().GetResult();
+                    Console.Error.WriteLine($"manifest: {(DateTime.UtcNow - started).TotalSeconds:0.0} s");
+                    foreach (var g in games)
+                    {
+                        if (args[0] == "saves")
+                        {
+                            var files = host.Saves.Find(g).GetAwaiter().GetResult();
+                            Console.WriteLine($"{g.Title}: {files.Count} file{(files.Count == 1 ? "" : "s")}, {DiskSize.Format(files.Sum(f => f.Size))}");
+                            foreach (var f in files)
+                            {
+                                Console.WriteLine($"    {DiskSize.Format(f.Size),9}  {f.Path}");
+                            }
+                        }
+                        else
+                        {
+                            var b = host.Saves.Backup(g, "cli").GetAwaiter().GetResult();
+                            Console.WriteLine(b == null ? $"{g.Title}: no save files found" : $"{g.Title}: {b.Files} files → {b.Archive}");
+                        }
+                    }
+                    return 0;
+                }
+                case "tune":
+                {
+                    var t = new Tuning();
+                    var sub = args.Length > 1 ? args[1] : "status";
+                    if (sub is "apply" or "revert" && Environment.UserName != "root")
+                    {
+                        Console.Error.WriteLine("Needs root: sudo deckwrench tune " + sub);
+                        return 1;
+                    }
+                    static void Run(string[] cmd)
+                    {
+                        var psi = new System.Diagnostics.ProcessStartInfo(cmd[0]) { UseShellExecute = false };
+                        foreach (var a in cmd[1..])
+                        {
+                            psi.ArgumentList.Add(a);
+                        }
+                        Console.WriteLine("$ " + string.Join(' ', cmd));
+                        using var p = System.Diagnostics.Process.Start(psi)!;
+                        p.WaitForExit();
+                        // swapoff of a swap file that isn't active is fine; everything else must work.
+                        if (p.ExitCode != 0 && cmd[0] != "swapoff")
+                        {
+                            throw new InvalidOperationException($"{cmd[0]} failed (exit code {p.ExitCode})");
+                        }
+                    }
+                    IReadOnlyList<string> log;
+                    switch (sub)
+                    {
+                        case "apply":
+                            var i = Array.IndexOf(args, "--swap-mb");
+                            long? swap = i > 0 && i + 1 < args.Length ? long.Parse(args[i + 1], System.Globalization.CultureInfo.InvariantCulture) << 20 : null;
+                            log = t.Apply(swap, Run);
+                            break;
+                        case "revert":
+                            log = t.Revert(Run);
+                            break;
+                        default:
+                            foreach (var x in t.Read())
+                            {
+                                Console.WriteLine($"{x.Label,-30} {(x.Current == null ? "(not available)" : TuningSetting.Normalize(x.Current)),-10} recommended {x.Recommended}{(x.IsRecommended ? "  ✓" : "")}");
+                            }
+                            var sw = t.Swap();
+                            Console.WriteLine($"{"Swap file",-30} {(sw.File ?? "none")} {DiskSize.Format(sw.Size)}");
+                            Console.WriteLine(t.Applied ? "DeckWrench's tuning is installed." : "Not tuned by DeckWrench.");
+                            return 0;
+                    }
+                    foreach (var l in log)
+                    {
+                        Console.WriteLine(l);
+                    }
+                    return 0;
+                }
+                case "status":
+                {
+                    var s = host.Scan();
+                    var installDir = Path.GetDirectoryName(Environment.ProcessPath ?? AppContext.BaseDirectory)!;
+                    var appId = SteamSetup.Shortcut(installDir).AppId;
+                    var status = new
+                    {
+                        version = AppUpdater.DisplayVersion(AppUpdater.CurrentAppVersion()),
+                        summary = Checkup.Summary(s, host.Findings),
+                        findings = host.Findings.Select(f => new { level = f.Level.ToString().ToLowerInvariant(), title = f.Title, detail = f.Detail }),
+                        drives = s.Drives.Select(d => new { label = d.Drive.Label, free = d.Drive.Free, total = d.Drive.Total }),
+                        reclaimable = s.Reclaimable,
+                        pending = s.Pending.Select(p => p.Describe()),
+                        // Steam's 64-bit id of the DeckWrench shortcut, for steam://rungameid/.
+                        gameId = (((ulong)appId << 32) | 0x02000000UL).ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    };
+                    Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(status, new System.Text.Json.JsonSerializerOptions { WriteIndented = !args.Contains("--json") }));
+                    return 0;
                 }
                 case "games":
                 {

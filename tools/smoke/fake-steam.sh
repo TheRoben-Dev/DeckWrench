@@ -88,6 +88,12 @@ prefix "$STEAM" 1091500 "9.0-203" 40M
 prefix "$SD" 1145360 "experimental-9.0-20241121" 2M
 prefix "$STEAM" 230410 "9.0-203" 8M
 prefix "$STEAM" 271590 "8.0-5" 25M     # GTA V: uninstalled, prefix left behind
+# ELDEN RING keeps its saves where Ludusavi's manifest says (AppData/Roaming/EldenRing/<steam id>).
+ER="$STEAM/steamapps/compatdata/1245620/pfx/drive_c/users/steamuser/AppData/Roaming/EldenRing"
+mkdir -p "$ER/76561198000000000" "$STEAM/userdata/12345678/1245620/remote"
+echo "slot data" > "$ER/76561198000000000/ER0000.sl2"
+echo "<config/>" > "$ER/GraphicsConfig.xml"
+echo "cloud copy" > "$STEAM/userdata/12345678/1245620/remote/ER0000.sl2"
 shaders "$STEAM" 1245620 900M
 shaders "$STEAM" 1091500 1500M
 shaders "$SD" 1145360 120M

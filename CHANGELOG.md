@@ -3,6 +3,16 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.14.0
+
+- Save backups: "Back up saves" on a game's page keeps a small archive of its save and config files, found with Ludusavi's community list of where thousands of games keep them (downloaded weekly), plus Steam's own files for the game. Games the list doesn't know fall back to their folders in the prefix.
+- "Restore saves" puts a backup back into the game's folders where they are now (after a move to the SD card or a prefix reset too), lists every file it adds or replaces first, and backs up the current files before writing.
+- "Back up every game's saves" on the Games page, and Home now flags played games whose saves were never backed up.
+- Saves are backed up by themselves before a prefix reset, a prefix delete and an uninstall.
+- `deckwrench saves [game]` lists where each game's save files are; `deckwrench backup-saves [game]` backs them up.
+- SteamOS and Bazzite: "Tune memory for games" on Home applies the changes CryoUtilities made popular (swappiness 1, transparent huge pages, no proactive compaction, fair page locks, and a bigger swap file on SteamOS when there's room), after showing every change. It asks for your password (typed as dots; Steam's keyboard in Game Mode) and keeps the old values so "Revert memory tuning" puts them back. Home says when a SteamOS update reset them. Also `deckwrench tune`.
+- Decky Loader plugin (DeckWrench-decky.zip in the release): DeckWrench in the Quick Access menu, with Home's findings, free space per drive, Steam changes waiting for a restart with "Apply now", and "Fix in DeckWrench" to open the app. Also `deckwrench status --json`.
+
 ## 0.13.0
 
 - A Steam game's page shows its ProtonDB tier (with how many reports, and where recent ones are heading) and Valve's Steam Deck rating with Valve's notes ("Some text is small and hard to read"). They're fetched in the background, kept for a few days, and can be turned off in Settings → Scanning (only the games' app ids are sent).

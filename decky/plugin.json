@@ -1,0 +1,11 @@
+{
+  "name": "DeckWrench",
+  "author": "TheRoben-Dev",
+  "flags": [],
+  "api_version": 1,
+  "publish": {
+    "tags": ["tools", "proton", "storage"],
+    "description": "DeckWrench in the Quick Access menu: what needs attention, free space, and Steam changes waiting for a restart. Needs the DeckWrench app.",
+    "image": "https://raw.githubusercontent.com/TheRoben-Dev/DeckWrench/main/docs/screenshots/controller-home.png"
+  }
+}
