@@ -53,7 +53,8 @@ public static class Checkup
     /// <summary>Space that can be freed is worth a mention from this much.</summary>
     public const long WorthCleaning = 512L << 20;
 
-    public static IReadOnlyList<Finding> Run(ToolboxState s, Actions actions, Func<string, IReadOnlyList<string>>? readLog = null, Func<string, Core.Compat.CompatInfo?>? ratings = null)
+    public static IReadOnlyList<Finding> Run(ToolboxState s, Actions actions, Func<string, IReadOnlyList<string>>? readLog = null, Func<string, Core.Compat.CompatInfo?>? ratings = null,
+        IReadOnlyList<Core.Saves.SaveBackup>? saveBackups = null)
     {
         readLog ??= path => ProtonLogs.Tail(path, maxLines: 4000);
         var list = new List<Finding>();
@@ -187,23 +188,42 @@ public static class Checkup
             });
         }
 
-        // Prefixes without a backup: saves without Steam Cloud live there.
-        if (!Platform.IsWindows)
+        // Games that were played but whose saves were never backed up.
+        if (!Platform.IsWindows && saveBackups != null)
         {
-            var noBackup = s.Prefixes.Where(p => !p.External && !p.Orphan && p.Size > 0 && !s.Backups.Any(b => b.AppId == p.AppId)).ToList();
-            if (noBackup.Count > 0)
+            var backedUp = saveBackups.Select(b => b.GameKey).ToHashSet();
+            var none = actions.SaveCandidates().Where(g => (g.LastPlayed != null || g.Prefix is { Size: > 0 }) && !backedUp.Contains(g.Key)).ToList();
+            if (none.Count > 0)
             {
                 list.Add(new Finding
                 {
                     Key = "no-backup",
                     Level = FindingLevel.Attention,
-                    Title = noBackup.Count == 1 ? $"{noBackup[0].Owner ?? "1 game"}'s prefix has no backup" : $"{noBackup.Count} game prefixes have no backup",
-                    Detail = "Saves without Steam Cloud and your fixes live there. " + DiskSize.Format(noBackup.Sum(p => p.Size)) + " in all.",
-                    Explain = "A prefix holds the game's Windows side: saves that Steam Cloud doesn't sync, settings, and runtimes you installed. A backup brings it back after a reset, a reinstall or a SteamOS update.",
-                    Facts = noBackup.OrderByDescending(p => p.Size).Take(8).Select(p => (p.Owner ?? "App " + p.AppId, DiskSize.Format(p.Size))).ToList(),
-                    Actions = actions.ForPrefixPage().Where(a => a.Id == ActionId.BackupAllPrefixes).ToList(),
+                    Title = none.Count == 1 ? $"{none[0].Title} has no save backup" : $"{none.Count} games have no save backup",
+                    Detail = "Saves without Steam Cloud are lost with a prefix reset, a reinstall or a broken SD card.",
+                    Explain = "DeckWrench finds each game's save and config files (with Ludusavi's community list of where games keep them) and keeps small archives of them. It also backs saves up by itself before a prefix reset, delete or uninstall.",
+                    Facts = none.OrderByDescending(g => g.LastPlayed ?? DateTime.MinValue).Take(8).Select(g => (g.Title, g.LastPlayed is { } lp ? "played " + lp.ToLocalTime().ToString("d") : "")).ToList(),
+                    Actions = actions.Global().Where(a => a.Id == ActionId.BackupAllSaves).ToList(),
                 });
             }
+        }
+
+        // SteamOS / Bazzite with stock memory settings: the CryoUtilities tweaks.
+        if (Platform.IsGamingDistro && actions.ForTuning().FirstOrDefault(a => a.Id == ActionId.TuneMemory) is { Unavailable: not "Already tuned." } tune)
+        {
+            var t = new Tuning();
+            var off = t.Read().Where(x => x.Current != null && !x.IsRecommended).ToList();
+            var swap = t.Swap();
+            list.Add(new Finding
+            {
+                Key = "tuning",
+                Level = FindingLevel.Attention,
+                Title = t.Applied ? "Memory tuning was reset (a SteamOS update?)" : "Memory isn't tuned for games",
+                Detail = $"Swappiness {off.FirstOrDefault(x => x.Id == "swappiness")?.Current ?? "ok"}, swap file {DiskSize.Format(swap.Size)}. One press makes big games stutter less.",
+                Explain = string.Join("\n", off.Select(x => $"• {x.Label}: {TuningSetting.Normalize(x.Current!)} → {x.Recommended}. {x.Why}")),
+                Facts = [.. off.Select(x => (x.Label, TuningSetting.Normalize(x.Current!))), ("Swap file", DiskSize.Format(swap.Size))],
+                Actions = [tune],
+            });
         }
 
         if (list.Count == 0)
@@ -213,7 +233,7 @@ public static class Checkup
                 Key = "all-good",
                 Level = FindingLevel.Good,
                 Title = "Nothing needs your attention",
-                Detail = $"{s.Games.Count} games checked: Proton settings, logs, free space and backups.",
+                Detail = $"{s.Games.Count} games checked: Proton settings, logs, free space and save backups.",
                 Explain = "DeckWrench checks this after every scan.",
                 Actions = actions.Global().Where(a => a.Id == ActionId.Rescan).ToList(),
             });

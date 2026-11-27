@@ -374,7 +374,7 @@ public class ToolboxScanTests : IDisposable
         Assert.Single(f, x => x.Key.StartsWith("log:", StringComparison.Ordinal) && x.Title == "Battle.net crashed");
 
         Assert.Contains(f, x => x.Key == "cleanup" && x.Actions.Any(a => a.Id == ActionId.Cleanup));
-        Assert.Contains(f, x => x.Key == "no-backup" && x.Actions.Any(a => a.Id == ActionId.BackupAllPrefixes));
+        Assert.Contains(f, x => x.Key == "no-backup" && x.Actions.Any(a => a.Id == ActionId.BackupAllSaves));
         Assert.DoesNotContain(f, x => x.Level == FindingLevel.Good);
         Assert.Contains("problem", Checkup.Summary(host.State, f), StringComparison.Ordinal);
     }

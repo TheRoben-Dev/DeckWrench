@@ -35,6 +35,12 @@ public enum ActionId
     RemoveTool,
     OpenToolFolder,
 
+    // Saves
+    BackupSaves,
+    RestoreSaves,
+    DeleteSaveBackup,
+    BackupAllSaves,
+
     // Prefixes
     OpenPrefix,
     OpenSaves,
@@ -57,6 +63,10 @@ public enum ActionId
     ViewLog,
     DeleteLog,
     DeleteAllLogs,
+
+    // System
+    TuneMemory,
+    RevertTuning,
 
     // Storage
     Cleanup,
@@ -91,6 +101,9 @@ public sealed record ActionInput
     public Func<CancellationToken, Task<IReadOnlyList<ActionChoice>>>? LoadChoices { get; init; }
 
     public string Initial { get; init; } = "";
+
+    /// <summary>Text input shown as dots (a password); never logged.</summary>
+    public bool Secret { get; init; }
 
     /// <summary>Checks what was entered: an error keeps the input open (with the text kept), null goes on.</summary>
     public Func<string?, string?>? Validate { get; init; }

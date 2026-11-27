@@ -121,6 +121,13 @@ public sealed class GamesSection : Section
         {
             facts.Add(new("Prefix backups", backups.ToString()));
         }
+        if (!Platform.IsWindows && (g.IsSteam || g.IsShortcut))
+        {
+            var saves = Host.Saves.Backups.List(g.Key);
+            facts.Add(saves.Count > 0
+                ? new("Save backups", $"{saves.Count} · newest {saves[0].Created.ToLocalTime():g} ({saves[0].Files} files)")
+                : new("Save backups", "None yet", Tone.Warn));
+        }
         return facts;
     }
 
@@ -535,4 +542,10 @@ public sealed class HomeSection : Section
     public override IReadOnlyList<ToolAction> ActionsFor(object item) => ((Finding)item).Actions;
 
     // Findings come first; Scan again is on Y (F5) and Save a report on View / the menu.
+    // Below them: system tuning on SteamOS and Bazzite.
+    public override IReadOnlyList<ToolAction> PageActions => Platform.IsGamingDistro ? Host.Actions.ForTuning() : [];
+
+    public override bool PageActionsLast => true;
+
+    public override string PageActionsTitle => "System";
 }

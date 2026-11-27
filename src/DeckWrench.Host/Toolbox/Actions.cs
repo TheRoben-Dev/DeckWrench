@@ -56,6 +56,10 @@ public sealed class Actions
                 },
             },
         };
+        if (!Platform.IsWindows)
+        {
+            list.Add(BackupAllSaves());
+        }
         list.AddRange(PendingActions());
         return list;
     }
@@ -129,6 +133,10 @@ public sealed class Actions
                 Help = "Steam creates the Proton prefix the first time the game runs with Proton.",
                 Unavailable = "No prefix yet: the game hasn't run with Proton (or runs natively).",
             });
+        }
+        if (!Platform.IsWindows)
+        {
+            list.AddRange(ForSaves(g));
         }
         if (g.ShaderCache != null)
         {
@@ -204,6 +212,7 @@ public sealed class Actions
         Run = ctx =>
         {
             var note = "";
+            _host.Saves.TryBackup(g, "before uninstall");
             if (g.Prefix is { } p && Directory.Exists(p.Dir))
             {
                 var b = _host.Backups.Create(p, "before uninstall", new Progress<double>(v => ctx.Progress.Report(v * 0.95)), ctx.Ct);
@@ -604,6 +613,225 @@ public sealed class Actions
         };
     }
 
+    // ---- system tuning ----
+
+    /// <summary>The swap size Tune memory picks: the biggest offered (up to 16 GB) above the current one, or none.</summary>
+    public static long? SwapTarget(SwapInfo swap) => Tuning.SwapChoices(swap).Where(b => b > swap.Size).Cast<long?>().LastOrDefault();
+
+    private static string? TuningUnavailable(AppHost host) =>
+        Platform.IsWindows ? "This tunes SteamOS and Bazzite." : host.CliPath == null ? "Needs the deckwrench helper from a release build." : null;
+
+    private static ActionInput SudoPassword(string what) => new()
+    {
+        Kind = InputKind.Text,
+        Secret = true,
+        Prompt = $"Your password, to {what} (sudo). Next you see every change before anything happens.",
+        Validate = t => string.IsNullOrEmpty(t) ? "Type your password. No password yet? In Desktop Mode open Konsole and run passwd." : null,
+    };
+
+    public IReadOnlyList<ToolAction> ForTuning()
+    {
+        var tuning = new Tuning();
+        var settings = tuning.Read();
+        var swap = tuning.Swap();
+        var target = SwapTarget(swap);
+        var changes = settings.Where(s => s.Current != null && !s.IsRecommended).ToList();
+        return
+        [
+            new()
+            {
+                Id = ActionId.TuneMemory,
+                Label = tuning.Applied && changes.Count == 0 && target == null ? "Memory is tuned for games" : "Tune memory for games",
+                Destructive = true,
+                Help = "The changes CryoUtilities made popular: swap only when RAM is full (swappiness 1), huge pages, no background memory shuffling"
+                    + (target != null ? $", and a {target >> 30} GB swap file (now {DiskSize.Format(swap.Size)})" : "")
+                    + ". Fewer stutters in big games. Revert puts everything back.",
+                Unavailable = TuningUnavailable(_host) ?? (changes.Count == 0 && target == null ? "Already tuned." : null),
+                Input = SudoPassword("change system settings"),
+                Plan = (_, _) => new ConfirmPlan
+                {
+                    Title = "Tune memory for games?",
+                    Verb = "Tune",
+                    Contents = [.. changes.Select(s => ($"{s.Label}: {TuningSetting.Normalize(s.Current!)} → {s.Recommended}", 0L)),
+                        .. target is { } t ? new[] { ($"Swap file {Tuning.SwapFile}: {DiskSize.Format(swap.Size)} → {DiskSize.Format(t)}", t - swap.Size) } : []],
+                    TotalSize = target is { } t2 ? Math.Max(0, t2 - swap.Size) : 0,
+                    Backup = $"The current values are saved in {Tuning.StockFile}; Revert puts them back.",
+                    Caution = $"Kept over reboots by {Tuning.SysctlFile} and {Tuning.TmpfilesFile}. A SteamOS update can reset them; DeckWrench's Home shows it."
+                        + (target != null ? " Making the swap file takes a minute." : ""),
+                    Paths = [Tuning.SysctlFile, Tuning.TmpfilesFile, .. target != null ? new[] { Tuning.SwapFile } : []],
+                },
+                ShowsOutput = true,
+                Run = ctx => RunAsRoot(ctx, ["tune", "apply", .. target is { } t ? new[] { "--swap-mb", (t >> 20).ToString(System.Globalization.CultureInfo.InvariantCulture) } : []], "Memory tuned for games"),
+            },
+            new()
+            {
+                Id = ActionId.RevertTuning,
+                Label = "Revert memory tuning",
+                Destructive = true,
+                Help = "Puts back the values from before the first tune (and the swap file size) and removes DeckWrench's files from /etc.",
+                Unavailable = TuningUnavailable(_host) ?? (!tuning.Applied ? "Nothing to revert: DeckWrench hasn't tuned this system." : null),
+                Input = SudoPassword("put the system settings back"),
+                Plan = (_, _) => new ConfirmPlan
+                {
+                    Title = "Revert memory tuning?",
+                    Verb = "Revert",
+                    Contents = [(Tuning.SysctlFile, 0L), (Tuning.TmpfilesFile, 0L)],
+                    Caution = "Swappiness, huge pages and the swap file go back to how they were before DeckWrench tuned them.",
+                    Paths = [Tuning.SysctlFile, Tuning.TmpfilesFile, Tuning.StockFile],
+                },
+                ShowsOutput = true,
+                Run = ctx => RunAsRoot(ctx, ["tune", "revert"], "Memory tuning reverted"),
+            },
+        ];
+    }
+
+    /// <summary>Runs the deckwrench helper through sudo with the typed password on stdin (never on the command line or in a log).</summary>
+    private async Task<ActionResult> RunAsRoot(ActionContext ctx, string[] args, string done)
+    {
+        ctx.Progress.Report(-1);
+        var psi = new ProcessStartInfo("sudo") { UseShellExecute = false, RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true };
+        foreach (var a in (string[])["-S", "-k", "-p", "", _host.CliPath!, .. args])
+        {
+            psi.ArgumentList.Add(a);
+        }
+        AppLog.Info("run sudo deckwrench " + string.Join(' ', args));
+        using var p = new Process { StartInfo = psi };
+        var output = new System.Text.StringBuilder();
+        p.OutputDataReceived += (_, e) => { if (e.Data != null) { ctx.Log(e.Data); } };
+        p.ErrorDataReceived += (_, e) => { if (e.Data != null) { output.AppendLine(e.Data); ctx.Log(e.Data); } };
+        p.Start();
+        p.BeginOutputReadLine();
+        p.BeginErrorReadLine();
+        await p.StandardInput.WriteLineAsync(ctx.Input ?? "").ConfigureAwait(false);
+        p.StandardInput.Close();
+        await p.WaitForExitAsync(ctx.Ct).ConfigureAwait(false);
+        if (p.ExitCode != 0)
+        {
+            var err = output.ToString();
+            throw new InvalidOperationException(err.Contains("incorrect password", StringComparison.OrdinalIgnoreCase) || err.Contains("Sorry, try again", StringComparison.Ordinal)
+                ? "sudo didn't take that password. No password yet? In Desktop Mode open Konsole and run passwd, then try again."
+                : $"The helper stopped (exit code {p.ExitCode}). The output shows why.");
+        }
+        return new ActionResult(done);
+    }
+
+    // ---- saves ----
+
+    public IReadOnlyList<ToolAction> ForSaves(GameEntry g)
+    {
+        var backups = _host.Saves.Backups.List(g.Key);
+        return
+        [
+            new()
+            {
+                Id = ActionId.BackupSaves,
+                Label = "Back up saves",
+                Help = "Saves the game's save and config files (found with Ludusavi's community list of where games keep them, plus Steam's own files for it) as a small archive in "
+                    + _host.Saves.Backups.Dir + ". Made automatically before a prefix reset, delete or uninstall.",
+                ShowsOutput = true,
+                Run = async ctx =>
+                {
+                    ctx.Progress.Report(-1);
+                    var b = await _host.Saves.Backup(g, "manual", ctx.Ct).ConfigureAwait(false);
+                    if (b == null)
+                    {
+                        return new ActionResult($"No save files found for {g.Title}.", Rescan: false);
+                    }
+                    foreach (var root in b.Roots)
+                    {
+                        ctx.Log($"{root.Key}: {root.Value}");
+                    }
+                    return new ActionResult($"Backed up {b.Files} save file{(b.Files == 1 ? "" : "s")} of {g.Title} ({DiskSize.Format(b.ArchiveSize)})");
+                },
+            },
+            new()
+            {
+                Id = ActionId.RestoreSaves,
+                Label = backups.Count > 0 ? $"Restore saves ({backups.Count} backup{(backups.Count == 1 ? "" : "s")})" : "Restore saves",
+                Destructive = true,
+                Help = "Puts a save backup's files back into the game's folders (where they are now, even after a move or a prefix reset). The current files are backed up first.",
+                Unavailable = backups.Count == 0 ? "No save backups of this game yet." : null,
+                Input = new ActionInput
+                {
+                    Kind = InputKind.Choice,
+                    Prompt = $"Restore which saves of {g.Title}?",
+                    Choices = backups.Select(b => new ActionChoice(b.Archive, b.Created.ToLocalTime().ToString("g"), $"{b.Reason} · {b.Files} files · {DiskSize.Format(b.Size)}")).ToList(),
+                },
+                Plan = (input, _) =>
+                {
+                    var b = backups.First(x => x.Archive == input);
+                    var plan = _host.Saves.Backups.Plan(b, _host.Saves.RootsFor(g));
+                    var replaced = plan.Where(x => x.Replaces).ToList();
+                    return new ConfirmPlan
+                    {
+                        Title = $"Put back {plan.Count} save file{(plan.Count == 1 ? "" : "s")} of {g.Title} from {b.Created.ToLocalTime():g}?",
+                        Verb = "Back up current and restore",
+                        Contents = plan.Select(x => ((x.Replaces ? "replaces " : "adds ") + x.Dest, x.Size)).ToList(),
+                        TotalSize = replaced.Sum(x => File.Exists(x.Dest) ? new FileInfo(x.Dest).Length : 0),
+                        Backup = $"The {replaced.Count} file{(replaced.Count == 1 ? "" : "s")} it replaces are backed up first, in {_host.Saves.Backups.Dir}.",
+                        Caution = "Close the game first. With Steam Cloud on, Steam may offer to keep its cloud copy instead when the game starts next.",
+                        Paths = plan.Select(x => x.Dest).ToList(),
+                    };
+                },
+                Run = async ctx =>
+                {
+                    var b = backups.First(x => x.Archive == ctx.Input);
+                    ctx.Progress.Report(-1);
+                    await _host.Saves.Backup(g, "before restore", ctx.Ct).ConfigureAwait(false);
+                    var n = _host.Saves.Backups.Restore(b, _host.Saves.RootsFor(g), ctx.Ct);
+                    AppLog.Info($"restored {n} save files of {g.Title} from {b.Archive}");
+                    return new ActionResult($"Restored {n} save file{(n == 1 ? "" : "s")} of {g.Title} from {b.Created.ToLocalTime():g}");
+                },
+            },
+        ];
+    }
+
+    /// <summary>Games whose saves can be looked for: Steam games and non-Steam games in Steam with a prefix.</summary>
+    public IReadOnlyList<GameEntry> SaveCandidates() =>
+        S.Games.Where(g => g.IsSteam || (g.IsShortcut && g.Prefix != null)).OrderBy(g => g.Title, StringComparer.OrdinalIgnoreCase).ToList();
+
+    public ToolAction BackupAllSaves()
+    {
+        var games = SaveCandidates();
+        var latest = _host.Saves.Backups.List().GroupBy(b => b.GameKey).ToDictionary(x => x.Key, x => x.First());
+        return new ToolAction
+        {
+            Id = ActionId.BackupAllSaves,
+            Label = "Back up every game's saves",
+            Help = $"Saves each picked game's save and config files as a small archive in {_host.Saves.Backups.Dir}. Much smaller than prefix backups; good before a SteamOS update.",
+            Unavailable = Platform.IsWindows ? NotOnWindows : games.Count == 0 ? "No games." : null,
+            ShowsOutput = true,
+            Input = new ActionInput
+            {
+                Kind = InputKind.MultiChoice,
+                Prompt = "Back up the saves of which games?",
+                Choices = games.Select(g => new ActionChoice(g.Key, g.Title,
+                    latest.TryGetValue(g.Key, out var last) ? $"Last backup {last.Created.ToLocalTime():g}" : "No save backup yet", true)).ToList(),
+            },
+            Run = async ctx =>
+            {
+                var keys = (ctx.Input ?? "").Split('\n', StringSplitOptions.RemoveEmptyEntries).ToHashSet();
+                var picked = games.Where(g => keys.Contains(g.Key)).ToList();
+                if (picked.Count == 0)
+                {
+                    return new ActionResult("Nothing picked", Rescan: false);
+                }
+                ctx.Log("Reading the list of where games keep their saves…");
+                await _host.Saves.Manifest(ctx.Ct).ConfigureAwait(false);
+                int done = 0, saved = 0;
+                foreach (var g in picked)
+                {
+                    ctx.Ct.ThrowIfCancellationRequested();
+                    var b = await _host.Saves.Backup(g, "all", ctx.Ct).ConfigureAwait(false);
+                    ctx.Log(b == null ? $"{g.Title}: no save files found" : $"{g.Title}: {b.Files} files, {DiskSize.Format(b.ArchiveSize)}");
+                    saved += b == null ? 0 : 1;
+                    ctx.Progress.Report(++done / (double)picked.Count);
+                }
+                return new ActionResult($"Backed up the saves of {saved} game{(saved == 1 ? "" : "s")}" + (saved < picked.Count ? $" ({picked.Count - saved} had none found)" : ""));
+            },
+        };
+    }
+
     // ---- prefixes ----
 
     public IReadOnlyList<ToolAction> ForPrefix(AppFolder p, GameEntry? game = null)
@@ -669,6 +897,7 @@ public sealed class Actions
                 Run = ctx =>
                 {
                     var b = _host.Backups.Create(p, "before reset", new Progress<double>(v => ctx.Progress.Report(v * 0.9)), ctx.Ct);
+                    _host.Saves.TryBackup(game, "before prefix reset");
                     PrefixBackups.DeleteTree(p.Dir);
                     AppLog.Info($"reset prefix {p.Dir} (backup {b.Archive})");
                     return Task.FromResult(new ActionResult($"Reset. Backup saved ({DiskSize.Format(b.ArchiveSize)}); Steam makes a new prefix on the next start."));
@@ -680,10 +909,11 @@ public sealed class Actions
             Id = ActionId.DeletePrefix,
             Label = "Delete prefix",
             Destructive = true,
-            Help = p.Orphan ? "Frees the space. The game it belonged to isn't installed any more." : "Deletes the prefix without a backup (use Back up first to keep saves).",
+            Help = p.Orphan ? "Frees the space. The game it belonged to isn't installed any more." : "Deletes the prefix without a prefix backup. The game's save files are still backed up first (Saves on its page).",
             Plan = (_, ct) => PrefixPlan(p, $"Delete the prefix of {name}? There's no backup unless you made one.", "Delete", null, ct),
             Run = ctx =>
             {
+                _host.Saves.TryBackup(game, "before prefix delete");
                 PrefixBackups.DeleteTree(p.Dir);
                 AppLog.Info($"deleted prefix {p.Dir}");
                 return Task.FromResult(new ActionResult($"Deleted the prefix of {name}"));

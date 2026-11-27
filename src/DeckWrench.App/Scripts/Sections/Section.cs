@@ -87,6 +87,11 @@ public abstract class Section
     /// <summary>Actions for the whole section (Download GE-Proton, Clear all, Clean up).</summary>
     public virtual IReadOnlyList<ToolAction> PageActions => [];
 
+    /// <summary>Controller mode: page actions under the list instead of above it (Home: findings first).</summary>
+    public virtual bool PageActionsLast => false;
+
+    public virtual string PageActionsTitle => "Actions";
+
     /// <summary>A longer explanation for an item, shown under its facts (log hints, contents).</summary>
     public virtual string Notes(object item) => "";
 

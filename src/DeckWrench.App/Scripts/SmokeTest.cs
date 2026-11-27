@@ -159,6 +159,26 @@ public partial class SmokeTest : Node
             Check(Main.Instance.Host!.Notes.Get("steam:" + Elden) == "GE-Proton9-20 fixes the cutscenes", "the note wasn't saved");
             Check(ActionButton(ActionId.EditNotes)?.Text.Contains("Edit your notes") == true, "the page didn't pick up the note");
             Check(ActionButton(ActionId.OpenProtonDb) != null, "no ProtonDB link");
+            ActionButton(ActionId.BackupSaves)?.GrabFocus();
+        }, expect: "Back up saves");
+        // Saves: found with the (stand-in) Ludusavi manifest plus Steam's userdata, then a restore plan cancelled.
+        Step("saves-backup", () => Tap(JoyButton.A), wait: 3.0, expect: "Close");
+        Step("saves-backed-up", () =>
+        {
+            var b = Main.Instance.Host!.Saves.Backups.List("steam:" + Elden);
+            Check(b.Count == 1 && b[0].Files == 3, $"expected one save backup of 3 files, got {b.Count} ({b.FirstOrDefault()?.Files})");
+            (Focusable("Back to where you were") as BaseButton)?.EmitSignal(BaseButton.SignalName.Pressed);
+        }, wait: 1.2);
+        Step("saves-restore", () =>
+        {
+            ActionButton(ActionId.RestoreSaves)?.GrabFocus();
+            Tap(JoyButton.A);
+        }, wait: 1.2);
+        Step("saves-restore-pick", () => Tap(JoyButton.A), wait: 1.5, expect: "Cancel");
+        Step("saves-restore-cancel", () => Tap(JoyButton.B), wait: 0.8);
+        Step("saves-top", () =>
+        {
+            Check(Main.Instance.Host!.Saves.Backups.List("steam:" + Elden).Count == 1, "cancelling the restore made a backup");
             ActionButton(ActionId.SetCompatTool)?.GrabFocus();  // back to the top, where the note shows
         }, expect: "Proton: ");
         Step("game-back", () => Tap(JoyButton.B), expect: "ELDEN RING:", tab: "Games");

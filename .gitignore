@@ -6,3 +6,4 @@ bin/
 obj/
 .godot/
 dist*/
+node_modules/

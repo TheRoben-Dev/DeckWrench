@@ -79,6 +79,9 @@ public sealed class AppHost
 
     /// <summary>ProtonDB tiers and Steam Deck ratings, cached for a few days.</summary>
     public Core.Compat.CompatReports Compat { get; }
+
+    /// <summary>Finding and backing up games' saves.</summary>
+    public SaveService Saves { get; }
     public Actions Actions { get; }
 
     private readonly ToolboxScanner _scanner;
@@ -106,6 +109,7 @@ public sealed class AppHost
         Sizes = new SizeCache(Path.Combine(Paths.Cache, "sizes.json"));
         Compat = new Core.Compat.CompatReports(Path.Combine(Paths.Cache, "ratings.json"), Http);
         _scanner = new ToolboxScanner(Paths, Pending, Backups, Sizes);
+        Saves = new SaveService(this);
         Actions = new Actions(this);
     }
 
@@ -117,7 +121,7 @@ public sealed class AppHost
         AppLog.Info($"scan: {(DateTime.UtcNow - started).TotalMilliseconds:0} ms, folder sizes {Sizes.Hits} remembered, {Sizes.Misses} measured");
         Sizes.Save();
         State = state;
-        Findings = Checkup.Run(state, Actions, ratings: Compat.Get);
+        Findings = Checkup.Run(state, Actions, ratings: Compat.Get, saveBackups: Saves.Backups.List());
         StateChanged?.Invoke();
         return state;
     }
@@ -136,7 +140,7 @@ public sealed class AppHost
         var changed = await Compat.Refresh(stale, ct).ConfigureAwait(false);
         if (changed > 0)
         {
-            Findings = Checkup.Run(State, Actions, ratings: Compat.Get);
+            Findings = Checkup.Run(State, Actions, ratings: Compat.Get, saveBackups: Saves.Backups.List());
         }
         return changed;
     }

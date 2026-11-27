@@ -9,4 +9,7 @@
     <EmbeddedResource Include="..\..\data\tricks.json" LogicalName="tricks.json" />
     <EmbeddedResource Include="..\..\data\launch-presets.json" LogicalName="launch-presets.json" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="YamlDotNet" Version="16.3.0" />
+  </ItemGroup>
 </Project>

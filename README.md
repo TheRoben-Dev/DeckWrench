@@ -25,6 +25,10 @@ and double-click it. Either way the download is checked against `SHA256SUMS`, De
 `~/Applications/DeckWrench`, and it's added to Steam with its own art, so it opens from Game Mode
 (Library → Non-Steam). Updates install from inside the app, with a rollback.
 
+**Decky Loader user?** Add `DeckWrench-decky.zip` from the release (Decky settings → Developer → Install
+plugin from ZIP) for a Quick Access panel with what needs attention, free space and an "Apply now"
+for waiting Steam changes. See [decky/](decky/README.md).
+
 ### What it does for you
 
 - **Tells you what's wrong.** Home checks every game after each scan: a Proton version that was
@@ -35,8 +39,11 @@ and double-click it. Either way the download is checked against `SHA256SUMS`, De
   SD card or internal storage. You always see the size and contents before anything goes.
 - **Makes Proton easy.** Download GE-Proton, switch many games to it at once, set the default, and
   run protontricks (Visual C++, .NET, DirectX extras, fonts) with a gamepad.
-- **Protects your prefixes.** Back up and restore any game's prefix (saves without Steam Cloud live
-  there). Resets and uninstalls back up first.
+- **Protects your saves.** Small save backups for every game (it knows where thousands of games keep
+  their saves, thanks to Ludusavi's manifest), restored into the game's current folders. Prefix resets,
+  deletes and uninstalls back the saves up first, and whole prefixes can be backed up too.
+- **Makes big games stutter less.** On SteamOS and Bazzite, one press applies the memory tweaks
+  CryoUtilities made popular (swappiness, huge pages, compaction, a bigger swap file), with a full revert.
 - **Works the same with a mouse.** A separate desktop layout with menus, sortable tables and
   shortcuts has every feature the controller layout has.
 
@@ -56,6 +63,8 @@ and double-click it. Either way the download is checked against `SHA256SUMS`, De
 | **Prefixes** | Open, back up (`.tar.gz`), restore, reset (always backs up first) or delete a game's `compatdata` prefix. Run curated protontricks verbs (Visual C++, .NET, DirectX extras, fonts, Windows version), your own verbs from `tricks.json`, or type any other winetricks verb. Back up every prefix in one go, and keep only the newest backup (or few) of each. Orphaned prefixes of uninstalled games are flagged. Heroic and Lutris prefixes are listed too. |
 | **Shader cache** | Size per game, clear one, clear all orphans or clear everything. |
 | **Ratings** | Each Steam game's ProtonDB tier and Valve's Steam Deck rating (with Valve's notes) on its page, refreshed every few days in the background; off in Settings → Scanning. "Try GE-Proton…" / "Try Proton - Experimental" switches a misbehaving game to the usual next Proton in one press, and the page lists what to try next. |
+| **Saves** | Back up a game's save and config files (Ludusavi's manifest of save locations, Steam's userdata for the game, or its folders in the prefix), restore them into the game's current folders with a list of every file first, back up every game at once. Automatic before a prefix reset or delete and an uninstall. `deckwrench saves`, `deckwrench backup-saves`. |
+| **Memory tuning** | SteamOS / Bazzite: swappiness 1, transparent huge pages, no proactive compaction, fair page locks and a bigger swap file (SteamOS's /home/swapfile, only when there's room), applied with your password after showing each change, kept over reboots, and reverted exactly. `deckwrench tune`. |
 | **Notes** | Your own note on any game ("GE-Proton9-20 fixes the cutscenes"), shown first on its page and kept in `notes.json` in the config folder. Steam games link to their ProtonDB reports (in Steam's browser in Game Mode). |
 | **Report** | "Save a report" (View / Select, or `deckwrench report`) writes your system, drives, Proton versions, every game's Proton, launch options and prefix, recent Proton log errors and cleanup totals to a Markdown file to share when asking for help. Your home folder shows as `~`. |
 | **Storage** | Per-drive breakdown (games, prefixes, shader caches, Proton versions, backups, everything else). Move a game between internal storage and the SD card (through Steam's own mover while Steam runs, or DeckWrench's own copy-verify-swap when it's closed). A cleanup list with what each item frees (orphaned prefixes and shader caches, unused Proton, logs, old backups, and Steam's leftover downloads, update scratch and Workshop items of uninstalled games), and a per-drive planner ("Free space on SD card") that combines that drive's cleanup with moving its biggest games to a drive that has room, showing the total before anything happens. |
@@ -122,6 +131,8 @@ that applies queued Steam changes:
 
 ```
 deckwrench checkup          # exit code 1 when something needs fixing
+deckwrench saves [game] | backup-saves [game]
+sudo deckwrench tune apply [--swap-mb N] | revert    # deckwrench tune shows the current values
 deckwrench games | proton | prefixes [--orphans] | shadercache | storage | logs | pending
 deckwrench apply-pending [--wait] [--restart-steam]
 deckwrench steam-add [--restart]
@@ -171,4 +182,5 @@ See [docs/plan.md](docs/plan.md) for the phases.
 
 Visual style, themes, sounds, navigation and the overall code structure come from
 [Luma Modman](https://github.com/TheRoben-Dev/Luma-Modman) and [Scanline](https://github.com/TheRoben-Dev/Scanline).
-DeckWrench is not affiliated with Valve. GE-Proton is by GloriousEggroll.
+Save locations come from [Ludusavi's manifest](https://github.com/mtkennerly/ludusavi-manifest) (downloaded at runtime),
+built from PCGamingWiki. DeckWrench is not affiliated with Valve. GE-Proton is by GloriousEggroll.
