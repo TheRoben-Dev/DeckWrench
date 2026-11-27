@@ -97,6 +97,7 @@ public abstract class Section
 
     public static readonly IReadOnlyList<Section> All =
     [
+        new HomeSection(),
         new GamesSection(),
         new ProtonSection(),
         new PrefixesSection(),

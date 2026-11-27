@@ -22,6 +22,7 @@ public partial class SmokeTest : Node
     private const string Elden = "1245620";
     private IReadOnlyList<string> _controllerActions = [];
     private IReadOnlyList<string> _shortcutActions = [];
+    private IReadOnlyList<string> _homeActions = [];
 
     public SmokeTest(string outDir)
     {
@@ -30,7 +31,30 @@ public partial class SmokeTest : Node
         // The animated background costs a lot under software rendering (CI) and would skew timing.
         // The run script sets up a fake Steam home (games on internal and SD, Proton versions,
         // prefixes, shader caches, a Proton log) and a stand-in GE-Proton releases API.
-        Step("games-after-scan", () => SetAnimatedBackground(false), wait: 3.0, tab: "Games");
+        // Home: what the scan found that needs attention, each with its fix.
+        Step("home-after-scan", () => SetAnimatedBackground(false), wait: 3.0, tab: "Home");
+        Step("home-findings", () =>
+        {
+            var f = Main.Instance.Host!.Findings;
+            Check(f.Any(x => x.Key == "log:steam:" + Elden && x.Level == FindingLevel.Problem), "ELDEN RING's missing DLLs weren't flagged");
+            Check(f.Any(x => x.Key == "cleanup"), "the space to free wasn't flagged");
+            Check(f.First().Level == FindingLevel.Problem, "problems aren't first");
+            // Eight tabs, the status chip and the version must fit the Deck's 1280 px.
+            var header = Descendants(GetTree().Root).OfType<Header>().First();
+            var width = GetViewport().GetVisibleRect().Size.X;
+            Check(header.GetGlobalRect().End.X <= width + 1, $"the header runs off screen ({header.GetGlobalRect().End.X:0} px of {width:0})");
+            Focusable("ELDEN RING: MSVCP140.dll is missing")?.GrabFocus();
+        }, expect: "ELDEN RING: MSVCP140.dll is missing", tab: "Home");
+        Step("home-finding-page", () => Tap(JoyButton.A), wait: 1.2, expect: "Install Visual C++");
+        Step("home-finding-parity", () =>
+        {
+            _homeActions = ActionIds();
+            Check(_homeActions.Contains(nameof(ActionId.RunTricks)) && _homeActions.Contains(nameof(ActionId.ViewLog)), $"the finding's actions are [{string.Join(", ", _homeActions)}]");
+        });
+        Step("home-fix-picker", () => Tap(JoyButton.A), wait: 1.2, expect: "Apply (2 picked)");
+        Step("home-fix-picker-back", () => Tap(JoyButton.B), wait: 0.8);
+        Step("home-back", () => Tap(JoyButton.B), tab: "Home");
+        Step("games-after-scan", () => Tap(JoyButton.RightShoulder), wait: 1.0, tab: "Games");
         Step("scan-found-everything", () =>
         {
             var st = Main.Instance.Host!.State;
@@ -150,10 +174,10 @@ public partial class SmokeTest : Node
         Step("tab-storage", () => Tap(JoyButton.RightShoulder), tab: "Storage");
         Step("tab-logs", () => Tap(JoyButton.RightShoulder), tab: "Logs");
         Step("tab-settings", () => Tap(JoyButton.RightShoulder), tab: "Settings");
-        Step("tab-wraps", () => Tap(JoyButton.RightShoulder), tab: "Games");
+        Step("tab-wraps", () => Tap(JoyButton.RightShoulder), tab: "Home");
         Step("tab-lb-wraps", () => Tap(JoyButton.LeftShoulder), tab: "Settings");
         // Proton: GE-Proton releases from the stand-in API.
-        Step("proton-tab", () => Key(Godot.Key.Key2, ctrl: true), tab: "Proton");
+        Step("proton-tab", () => Key(Godot.Key.Key3, ctrl: true), tab: "Proton");
         Step("ge-download", () =>
         {
             ActionButton(ActionId.InstallGeProton)?.GrabFocus();
@@ -170,7 +194,7 @@ public partial class SmokeTest : Node
         Step("proton-use-for-games-back", () => Tap(JoyButton.B), expect: "Use for games");
         Step("proton-tool-back", () => Tap(JoyButton.B), tab: "Proton");
         // Prefixes: the orphan is flagged; its delete shows size and contents.
-        Step("prefixes-tab", () => Key(Godot.Key.Key3, ctrl: true), tab: "Prefixes");
+        Step("prefixes-tab", () => Key(Godot.Key.Key4, ctrl: true), tab: "Prefixes");
         Step("orphan-prefix", () =>
         {
             Focusable("App 271590:")?.GrabFocus();
@@ -203,9 +227,9 @@ public partial class SmokeTest : Node
         }, wait: 1.2, expect: "The newest one");
         Step("prune-backups-plan", () => Tap(JoyButton.A), wait: 1.5, expect: "Cancel");
         Step("prune-backups-cancel", () => Tap(JoyButton.B), tab: "Prefixes");
-        Step("shaders-tab", () => Key(Godot.Key.Key4, ctrl: true), tab: "Shaders");
+        Step("shaders-tab", () => Key(Godot.Key.Key5, ctrl: true), tab: "Shaders");
         // Storage: drive bars and the cleanup picker.
-        Step("storage-tab", () => Key(Godot.Key.Key5, ctrl: true), tab: "Storage");
+        Step("storage-tab", () => Key(Godot.Key.Key6, ctrl: true), tab: "Storage");
         Step("cleanup", () =>
         {
             ActionButton(ActionId.Cleanup)?.GrabFocus();
@@ -221,7 +245,7 @@ public partial class SmokeTest : Node
         Step("free-space-plan", () => Tap(JoyButton.Y), wait: 1.5, expect: "Cancel");
         Step("free-space-cancel", () => Tap(JoyButton.B), tab: "Storage");
         // Logs: the viewer suggests the missing runtimes.
-        Step("logs-tab", () => Key(Godot.Key.Key6, ctrl: true), tab: "Logs");
+        Step("logs-tab", () => Key(Godot.Key.Key7, ctrl: true), tab: "Logs");
         Step("log-page", () =>
         {
             Focusable("ELDEN RING:")?.GrabFocus();
@@ -248,7 +272,7 @@ public partial class SmokeTest : Node
         Step("status-back", () => Tap(JoyButton.B), tab: "Logs");
         Step("rescan", () => Tap(JoyButton.Y), wait: 2.5, tab: "Logs");
         // Settings: categories and panes.
-        Step("settings", () => Key(Godot.Key.Key7, ctrl: true), tab: "Settings");
+        Step("settings", () => Key(Godot.Key.Key8, ctrl: true), tab: "Settings");
         Step("settings-scanning", () => Press(Pad.Accept), expect: "Scan again");
         Step("settings-scanning-back", () => Press(Pad.Back), expect: "Scanning");
         Step("settings-appearance", () => Focusable("Theme, accent colour")?.GrabFocus(), expect: "Appearance");
@@ -274,7 +298,15 @@ public partial class SmokeTest : Node
         Step("changelog-back", () => Press(Pad.Back), expect: "Changelog");
 
         // ---- desktop mode: menu bar, sidebar, sortable tables, detail pane, windows ----
-        Step("desktop", () => Main.Instance.ApplyLayout(UiLayout.DesktopId), wait: 1.5, tab: "Games");
+        Step("desktop", () => Main.Instance.ApplyLayout(UiLayout.DesktopId), wait: 1.5, tab: "Home");
+        Step("desktop-home-parity", () =>
+        {
+            Check(Desktop.SelectRow("ELDEN RING: MSVCP140.dll is missing"), "the finding isn't in the Home table");
+            var desktop = ActionIds(Desktop.DetailPane);
+            Check(desktop.SequenceEqual(_homeActions),
+                $"Home actions differ between modes: controller [{string.Join(", ", _homeActions)}], desktop [{string.Join(", ", desktop)}]");
+        }, tab: "Home");
+        Step("desktop-games", () => Key(Godot.Key.Key2, ctrl: true), wait: 0.8, tab: "Games");
         Step("desktop-select", () => Check(Desktop.SelectRow("ELDEN RING"), "ELDEN RING isn't in the table"), wait: 0.8, tab: "Games");
         Step("desktop-parity", () =>
         {
@@ -326,14 +358,14 @@ public partial class SmokeTest : Node
             Desktop.OpenContextMenu();
         }, wait: 0.8);
         Step("desktop-context-close", () => Key(Godot.Key.Escape), tab: "Games");
-        Step("desktop-proton", () => Key(Godot.Key.Key2, ctrl: true), tab: "Proton");
+        Step("desktop-proton", () => Key(Godot.Key.Key3, ctrl: true), tab: "Proton");
         Step("desktop-proton-tool", () =>
         {
             Check(Desktop.SelectRow("GE-Proton9-20"), "GE-Proton9-20 isn't in the table");
             ActionButton(ActionId.UseToolForGames)?.EmitSignal(BaseButton.SignalName.Pressed);
         }, wait: 1.0, tab: "Proton");
         Step("desktop-proton-tool-cancel", () => Check(PressInWindow("Cancel"), "no games window"), tab: "Proton");
-        Step("desktop-prefixes", () => Key(Godot.Key.Key3, ctrl: true), tab: "Prefixes");
+        Step("desktop-prefixes", () => Key(Godot.Key.Key4, ctrl: true), tab: "Prefixes");
         Step("desktop-orphan", () => Check(Desktop.SelectRow("App 271590"), "orphan prefix isn't listed"), tab: "Prefixes");
         Step("desktop-delete-plan", () => ActionButton(ActionId.DeletePrefix)?.EmitSignal(BaseButton.SignalName.Pressed), wait: 1.5);
         Step("desktop-delete-cancel", () =>
@@ -343,22 +375,22 @@ public partial class SmokeTest : Node
         }, tab: "Prefixes");
         Step("desktop-prune-backups", () => ActionButton(ActionId.PruneBackups)?.EmitSignal(BaseButton.SignalName.Pressed), wait: 1.0);
         Step("desktop-prune-backups-cancel", () => Check(PressInWindow("Cancel"), "no keep-newest window"), tab: "Prefixes");
-        Step("desktop-shaders", () => Key(Godot.Key.Key4, ctrl: true), tab: "Shaders");
-        Step("desktop-storage", () => Key(Godot.Key.Key5, ctrl: true), tab: "Storage");
+        Step("desktop-shaders", () => Key(Godot.Key.Key5, ctrl: true), tab: "Shaders");
+        Step("desktop-storage", () => Key(Godot.Key.Key6, ctrl: true), tab: "Storage");
         Step("desktop-cleanup", () => ActionButton(ActionId.Cleanup)?.EmitSignal(BaseButton.SignalName.Pressed), wait: 1.0);
         Step("desktop-cleanup-cancel", () => Check(PressInWindow("Cancel"), "no cleanup window"), tab: "Storage");
         Step("desktop-free-space", () => ActionButton(ActionId.FreeSpaceOnDrive)?.EmitSignal(BaseButton.SignalName.Pressed), wait: 1.0);
         Step("desktop-free-space-cancel", () => Check(PressInWindow("Cancel"), "no planner window"), tab: "Storage");
-        Step("desktop-logs", () => Key(Godot.Key.Key6, ctrl: true), tab: "Logs");
+        Step("desktop-logs", () => Key(Godot.Key.Key7, ctrl: true), tab: "Logs");
         Step("desktop-log-viewer", () =>
         {
             Check(Desktop.SelectRow("ELDEN RING"), "the log isn't listed");
             ActionButton(ActionId.ViewLog)?.EmitSignal(BaseButton.SignalName.Pressed);
         }, wait: 1.2);
         Step("desktop-log-close", () => Check(PressInWindow("Close"), "no log window"), tab: "Logs");
-        Step("desktop-settings", () => Key(Godot.Key.Key7, ctrl: true), wait: 1.0, tab: "Settings");
+        Step("desktop-settings", () => Key(Godot.Key.Key8, ctrl: true), wait: 1.0, tab: "Settings");
         Step("desktop-rescan", () => Key(Godot.Key.F5), wait: 2.5, tab: "Settings");
-        Step("controller-again", () => Main.Instance.ApplyLayout(UiLayout.Controller), wait: 1.5, tab: "Games");
+        Step("controller-again", () => Main.Instance.ApplyLayout(UiLayout.Controller), wait: 1.5, tab: "Home");
     }
 
     private static DeckWrench.App.Desktop.DesktopShell Desktop =>
@@ -383,6 +415,18 @@ public partial class SmokeTest : Node
         .Where(b => b.IsVisibleInTree() && b.HasMeta(Rows.ActionMeta))
         .Select(b => b.GetMeta(Rows.ActionMeta).AsString())
         .ToList();
+
+    private static IEnumerable<Node> Descendants(Node root)
+    {
+        foreach (var c in root.GetChildren())
+        {
+            yield return c;
+            foreach (var d in Descendants(c))
+            {
+                yield return d;
+            }
+        }
+    }
 
     private static IEnumerable<Button> AllButtons(Node root)
     {

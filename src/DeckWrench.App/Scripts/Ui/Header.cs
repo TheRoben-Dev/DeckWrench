@@ -31,7 +31,8 @@ public partial class Header : HBoxContainer
 
     public Header(IEnumerable<string> tabs)
     {
-        AddThemeConstantOverride("separation", 22);
+        // Tight enough that eight tabs, the status chip and the version fit 1280 px (the Deck's screen).
+        AddThemeConstantOverride("separation", 16);
         var name = UiTheme.Label(UiTheme.Spec.Wordmark, 20, UiTheme.Nightgrid ? UiTheme.Text : UiTheme.AccentText);
         name.CustomMinimumSize = new Vector2(120, 0);
         AddChild(name);
@@ -47,7 +48,7 @@ public partial class Header : HBoxContainer
         };
         AddChild(_game);
         AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
-        _tabRow.AddThemeConstantOverride("separation", 22);
+        _tabRow.AddThemeConstantOverride("separation", 15);
         _tabRow.AddChild(_prev);
         foreach (var t in tabs)
         {

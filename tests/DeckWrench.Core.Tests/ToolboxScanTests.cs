@@ -356,4 +356,33 @@ public class ToolboxScanTests : IDisposable
         Assert.Equal("before uninstall", backup.Reason);
         Assert.True(Directory.Exists(elden.Prefix!.Dir));  // Steam does the removal, not us
     }
+
+    [LinuxFact]
+    public void CheckupFlagsLogProblemsCleanupAndMissingBackupsWorstFirst()
+    {
+        var host = Host();
+        var f = host.Findings;
+        Assert.Equal(FindingLevel.Problem, f[0].Level);
+        Assert.True(f.Select(x => x.Level).SequenceEqual(f.Select(x => x.Level).Order()), "not ordered worst first");
+
+        var elden = Assert.Single(f, x => x.Key == "log:steam:1245620");
+        Assert.Equal("ELDEN RING: MSVCP140.dll is missing", elden.Title);
+        var fix = Assert.Single(elden.Actions, a => a.Id == ActionId.RunTricks);
+        Assert.Equal(["d3dx9", "vcrun2022"], fix.Input!.Choices.Where(c => c.Selected).Select(c => c.Id).Order());
+        Assert.Contains(elden.Actions, a => a.Id == ActionId.ViewLog);
+
+        Assert.Single(f, x => x.Key.StartsWith("log:", StringComparison.Ordinal) && x.Title == "Battle.net crashed");
+
+        Assert.Contains(f, x => x.Key == "cleanup" && x.Actions.Any(a => a.Id == ActionId.Cleanup));
+        Assert.Contains(f, x => x.Key == "no-backup" && x.Actions.Any(a => a.Id == ActionId.BackupAllPrefixes));
+        Assert.DoesNotContain(f, x => x.Level == FindingLevel.Good);
+        Assert.Contains("problem", Checkup.Summary(host.State, f), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CheckupHintTitlesAreShort()
+    {
+        Assert.Equal("MSVCP140.dll is missing", Checkup.Short("MSVCP140.dll is missing: install the Visual C++ 2015-2022 runtime into the prefix."));
+        Assert.Equal("The game crashed", Checkup.Short("The game crashed (unhandled exception). Try another Proton version."));
+    }
 }
