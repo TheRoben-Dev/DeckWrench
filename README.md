@@ -1,12 +1,44 @@
 # DeckWrench
 
-A controller-first system toolbox for **SteamOS / Bazzite** (Steam Deck, Legion Go, ROG Ally…),
-also usable on desktop Linux and Windows. Built with Godot 4 (.NET / C#).
+**A game won't start, the SD card is full, or a Proton update broke your save? Open DeckWrench in
+Game Mode and it tells you what's wrong, and fixes it with one press.**
 
-DeckWrench looks after the plumbing around your games that Steam hides away: which Proton each game
-runs with, its Wine prefix, shader caches, launch options, Proton logs and what is eating your storage.
-Everything works with a gamepad in Game Mode, and there is a separate, traditional desktop layout
-for mouse and keyboard.
+DeckWrench is a controller-first toolbox for **Steam Deck, SteamOS and Bazzite** (Legion Go, ROG Ally…)
+that looks after everything Steam hides away: which Proton each game runs with, its Wine prefix,
+shader caches, launch options, Proton logs and what's eating your storage. No terminal, no Desktop
+Mode needed once it's installed. It also runs on desktop Linux and Windows.
+
+| Home: what needs attention | One press to fix it |
+| --- | --- |
+| ![Home lists problems first](docs/screenshots/controller-home.png) | ![A crash with its fix](docs/screenshots/controller-finding.png) |
+
+### Install in one line
+
+In Desktop Mode, open Konsole and paste:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/TheRoben-Dev/DeckWrench/main/tools/release/get.sh | bash -s -- --restart-steam
+```
+
+Or download **Install-DeckWrench.desktop** from the [latest release](https://github.com/TheRoben-Dev/DeckWrench/releases/latest)
+and double-click it. Either way the download is checked against `SHA256SUMS`, DeckWrench goes to
+`~/Applications/DeckWrench`, and it's added to Steam with its own art, so it opens from Game Mode
+(Library → Non-Steam). Updates install from inside the app, with a rollback.
+
+### What it does for you
+
+- **Tells you what's wrong.** Home checks every game after each scan: a Proton version that was
+  removed, crashes and missing DLLs in Proton logs (with the runtime that fixes them already ticked),
+  drives that are nearly full, space you can free, and prefixes with no backup.
+- **Frees space safely.** Leftovers of uninstalled games (prefixes, shader caches, downloads, Workshop
+  items), Proton versions nothing uses, old logs. A per-drive planner moves your biggest games off the
+  SD card or internal storage. You always see the size and contents before anything goes.
+- **Makes Proton easy.** Download GE-Proton, switch many games to it at once, set the default, and
+  run protontricks (Visual C++, .NET, DirectX extras, fonts) with a gamepad.
+- **Protects your prefixes.** Back up and restore any game's prefix (saves without Steam Cloud live
+  there). Resets and uninstalls back up first.
+- **Works the same with a mouse.** A separate desktop layout with menus, sortable tables and
+  shortcuts has every feature the controller layout has.
 
 | Controller mode | Desktop mode |
 | --- | --- |
@@ -18,6 +50,7 @@ for mouse and keyboard.
 
 | Area | What you can do |
 | --- | --- |
+| **Home** | A checkup after every scan, worst first: games set to a Proton that isn't installed, crashes and missing DLLs in Proton logs (with a one-press fix), drives that are nearly full, space that can be freed, prefixes with no backup, and Steam changes waiting for a restart. Also `deckwrench checkup`. |
 | **Proton** | Every installed Proton (Valve, Experimental, Hotfix), GE-Proton and system build, with size and which games use it. Set a game's compatibility tool, switch several games to one version at once ("Use for games"), or set the global default. Download GE-Proton from GitHub (SHA-512 checked) and remove custom builds. |
 | **Non-Steam games** | Shortcuts you added to Steam (Battle.net, emulators…) appear under Games with their Proton, prefix, shader cache, log and launch options (written to `shortcuts.vdf`). |
 | **Prefixes** | Open, back up (`.tar.gz`), restore, reset (always backs up first) or delete a game's `compatdata` prefix. Run curated protontricks verbs (Visual C++, .NET, DirectX extras, fonts, Windows version), your own verbs from `tricks.json`, or type any other winetricks verb. Back up every prefix in one go, and keep only the newest backup (or few) of each. Orphaned prefixes of uninstalled games are flagged. Heroic and Lutris prefixes are listed too. |
@@ -40,7 +73,7 @@ for you (or the next time Steam is closed).
   A selects, B goes back, LB / RB switch tabs, Y scans again, View opens Status (scan state, waiting
   Steam changes). Text fields open Steam's on-screen keyboard. Touch and mouse work everywhere.
 - **Desktop mode**: a classic utility window with a menu bar, a sidebar, sortable tables, a detail pane,
-  right-click menus, dialogs and keyboard shortcuts (F5 scan, Ctrl+1…6 sections, Ctrl+, settings).
+  right-click menus, dialogs and keyboard shortcuts (F5 scan, Ctrl+1…7 sections, Ctrl+, settings).
 
 Both modes are rendered from the same section and action catalog, so **every feature exists in both**.
 This is a permanent rule, checked by the UI smoke test (it compares the action list for the same game
@@ -52,7 +85,7 @@ Switch in Settings → Layout, or View → Switch to controller mode.
 
 ### SteamOS / Bazzite / Linux
 
-Download `DeckWrench-linux-x86_64.tar.gz` from the [latest release](https://github.com/TheRoben-Dev/DeckWrench/releases/latest), then in Desktop Mode:
+The one-line install at the top is the easy way. To do it by hand, download `DeckWrench-linux-x86_64.tar.gz` from the [latest release](https://github.com/TheRoben-Dev/DeckWrench/releases/latest), then in Desktop Mode:
 
 ```sh
 tar xzf DeckWrench-linux-x86_64.tar.gz
@@ -87,6 +120,7 @@ and log tools are Linux-only and say so; Steam libraries, storage, launch option
 that applies queued Steam changes:
 
 ```
+deckwrench checkup          # exit code 1 when something needs fixing
 deckwrench games | proton | prefixes [--orphans] | shadercache | storage | logs | pending
 deckwrench apply-pending [--wait] [--restart-steam]
 deckwrench steam-add [--restart]

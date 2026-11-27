@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Install DeckWrench
+Comment=Downloads and installs the latest DeckWrench (checked against SHA256SUMS), then adds it to Steam
+Exec=bash -c 'curl -fsSL https://raw.githubusercontent.com/TheRoben-Dev/DeckWrench/main/tools/release/get.sh | bash -s -- --restart-steam; echo; read -rp "Press Enter to close…"'
+Icon=system-software-install
+Terminal=true
+Categories=Utility;

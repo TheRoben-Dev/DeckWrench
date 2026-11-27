@@ -3,6 +3,13 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.12.0
+
+- New Home page, first in both layouts: a checkup after every scan that lists what needs your attention, worst first. Games set to a Proton that isn't installed, crashes and missing DLLs in Proton logs (the runtimes that fix them come already ticked), drives that are nearly full, space that can be freed, prefixes with no backup, and Steam changes waiting for a restart. Each one opens with the action that deals with it.
+- `deckwrench checkup` prints the same list (exit code 1 when something needs fixing).
+- One-line install: `curl -fsSL https://raw.githubusercontent.com/TheRoben-Dev/DeckWrench/main/tools/release/get.sh | bash`, or double-click Install-DeckWrench.desktop from the release. The download is checked against SHA256SUMS.
+- Controller mode: the top bar fits the Deck's screen again with the extra tab.
+
 ## 0.11.0
 
 - Games and Storage show when each Steam game was last played and how many hours it has (from Steam's own records), with a sortable "Played" column in desktop mode. Sort by it to find big games you haven't touched in months.

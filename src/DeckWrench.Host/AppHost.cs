@@ -80,6 +80,9 @@ public sealed class AppHost
     /// <summary>The last scan (empty until the first one finishes).</summary>
     public ToolboxState State { get; private set; } = ToolboxState.Empty;
 
+    /// <summary>What the last scan found that needs attention (Home), worst first.</summary>
+    public IReadOnlyList<Finding> Findings { get; private set; } = [];
+
     /// <summary>Raised (on the scanning thread) when a scan finishes.</summary>
     public event Action? StateChanged;
 
@@ -107,6 +110,7 @@ public sealed class AppHost
         AppLog.Info($"scan: {(DateTime.UtcNow - started).TotalMilliseconds:0} ms, folder sizes {Sizes.Hits} remembered, {Sizes.Misses} measured");
         Sizes.Save();
         State = state;
+        Findings = Checkup.Run(state, Actions);
         StateChanged?.Invoke();
         return state;
     }

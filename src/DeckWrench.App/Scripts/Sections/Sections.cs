@@ -437,3 +437,57 @@ public sealed class LogsSection : Section
 
     public override IReadOnlyList<ToolAction> PageActions => Host.Actions.ForLogsPage();
 }
+
+/// <summary>
+/// The first page: what the last scan found that needs attention, worst first, each with the
+/// action that deals with it (the same actions the other sections offer).
+/// </summary>
+public sealed class HomeSection : Section
+{
+    public override string Name => "Home";
+    public override string Summary => "What needs your attention: broken Proton settings, crashes in logs, full drives, space to free, prefixes without a backup.";
+    public override IReadOnlyList<string> Columns => ["Finding", "Details"];
+    public override string EmptyText => "Scanning…";
+
+    public override string Banner => Host.Findings.Count == 0 ? "" : Checkup.Summary(S, Host.Findings);
+
+    public override IReadOnlyList<Row> Rows() => Host.Findings.Select(f => new Row
+    {
+        Key = "finding:" + f.Key,
+        Title = f.Title,
+        Detail = f.Detail,
+        Status = LevelName(f.Level),
+        StatusTone = ToneOf(f.Level),
+        Cover = f.GameKey != null ? S.Game(f.GameKey)?.Install.Cover : null,
+        Cells = [new Cell(f.Title, (int)f.Level + f.Title, ToneOf(f.Level)), new Cell(f.Detail, f.Detail, Tone.Dim)],
+        Group = f.Level switch { FindingLevel.Problem => "Needs fixing", FindingLevel.Attention => "Worth a look", _ => "All good" },
+        Item = f,
+    }).ToList();
+
+    public static string LevelName(FindingLevel l) => l switch
+    {
+        FindingLevel.Problem => "Fix",
+        FindingLevel.Attention => "Look",
+        _ => "OK",
+    };
+
+    public static Tone ToneOf(FindingLevel l) => l switch
+    {
+        FindingLevel.Problem => Tone.Bad,
+        FindingLevel.Attention => Tone.Warn,
+        _ => Tone.Good,
+    };
+
+    public override IReadOnlyList<Fact> Facts(object item)
+    {
+        var f = (Finding)item;
+        return [new("Status", f.Level switch { FindingLevel.Problem => "Needs fixing", FindingLevel.Attention => "Worth a look", _ => "All good" }, ToneOf(f.Level)),
+            .. f.Facts.Select(x => new Fact(x.Label, x.Value))];
+    }
+
+    public override string Notes(object item) => ((Finding)item).Explain;
+
+    public override IReadOnlyList<ToolAction> ActionsFor(object item) => ((Finding)item).Actions;
+
+    // Findings come first; Scan again is on Y (F5) and Save a report on View / the menu.
+}

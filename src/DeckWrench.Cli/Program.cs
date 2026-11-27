@@ -17,6 +17,8 @@ internal static class Cli
 
           deckwrench version                  show the installed version
           deckwrench settings                 print the settings file path and contents
+          deckwrench checkup                  what needs attention: broken Proton settings, crashes
+                                              in logs, full drives, space to free, missing backups
           deckwrench games                    installed games: Proton, prefix, shader cache, size
           deckwrench proton                   installed compatibility tools and the games using them
           deckwrench prefixes [--orphans]     Proton prefixes (only orphaned ones with --orphans)
@@ -52,6 +54,22 @@ internal static class Cli
                     Console.WriteLine(host.Paths.SettingsFile);
                     Console.WriteLine(File.Exists(host.Paths.SettingsFile) ? File.ReadAllText(host.Paths.SettingsFile) : "(defaults)");
                     return 0;
+                case "checkup":
+                {
+                    var s = host.Scan();
+                    Console.WriteLine(Checkup.Summary(s, host.Findings));
+                    foreach (var f in host.Findings)
+                    {
+                        Console.WriteLine();
+                        Console.WriteLine($"[{f.Level switch { FindingLevel.Problem => "FIX", FindingLevel.Attention => "LOOK", _ => "OK" }}] {f.Title}");
+                        Console.WriteLine("    " + f.Detail);
+                        foreach (var a in f.Actions.Where(a => a.Unavailable == null))
+                        {
+                            Console.WriteLine("    → in DeckWrench: " + a.Label);
+                        }
+                    }
+                    return host.Findings.Any(f => f.Level == FindingLevel.Problem) ? 1 : 0;
+                }
                 case "games":
                 {
                     var s = host.Scan();
