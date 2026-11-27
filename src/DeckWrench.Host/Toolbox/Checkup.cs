@@ -53,7 +53,7 @@ public static class Checkup
     /// <summary>Space that can be freed is worth a mention from this much.</summary>
     public const long WorthCleaning = 512L << 20;
 
-    public static IReadOnlyList<Finding> Run(ToolboxState s, Actions actions, Func<string, IReadOnlyList<string>>? readLog = null)
+    public static IReadOnlyList<Finding> Run(ToolboxState s, Actions actions, Func<string, IReadOnlyList<string>>? readLog = null, Func<string, Core.Compat.CompatInfo?>? ratings = null)
     {
         readLog ??= path => ProtonLogs.Tail(path, maxLines: 4000);
         var list = new List<Finding>();
@@ -84,7 +84,7 @@ public static class Checkup
                 Detail = $"Set to {s.ToolLabel(g.EffectiveCompatTool)}. Steam won't start it like this.",
                 Explain = "The Proton version this game is set to was removed or never downloaded. Pick an installed one, or download that GE-Proton again from the Proton tab.",
                 Facts = [("Game", g.Title), ("Set to", g.EffectiveCompatTool!)],
-                Actions = actions.ForGame(g).Where(a => a.Id == ActionId.SetCompatTool).ToList(),
+                Actions = actions.ForGame(g).Where(a => a.Id is ActionId.SetCompatTool or ActionId.TryOtherProton).ToList(),
             });
         }
 
@@ -124,7 +124,7 @@ public static class Checkup
             fixes.AddRange(actions.ForLog(g.Log!).Where(a => a.Id == ActionId.ViewLog));
             if (g.RunsInSteam)
             {
-                fixes.AddRange(actions.ForGame(g).Where(a => a.Id == ActionId.SetCompatTool));
+                fixes.AddRange(actions.ForGame(g).Where(a => a.Id is ActionId.TryOtherProton or ActionId.SetCompatTool));
             }
             list.Add(new Finding
             {
@@ -134,7 +134,8 @@ public static class Checkup
                 Title = Short(hints[0].Text) is var first && first.StartsWith("The game ", StringComparison.Ordinal) ? $"{g.Title} {first["The game ".Length..]}" : $"{g.Title}: {first}",
                 Detail = hints.Count > 1 ? $"and {hints.Count - 1} more in its Proton log" : $"From its Proton log, {Ago(g.Log!.Modified)}",
                 Explain = string.Join("\n", hints.Select(h => "• " + h.Text)),
-                Facts = [("Game", g.Title), ("Proton", g.RunsInSteam ? s.ToolLabel(g.EffectiveCompatTool) : "?"), ("Log written", g.Log!.Modified.ToLocalTime().ToString("g"))],
+                Facts = [("Game", g.Title), ("Proton", g.RunsInSteam ? s.ToolLabel(g.EffectiveCompatTool) : "?"), ("Log written", g.Log!.Modified.ToLocalTime().ToString("g")),
+                    .. (ratings?.Invoke(g.AppId) is { } r && g.IsSteam ? new[] { ("ProtonDB", Core.Compat.CompatInfo.TierLabel(r.Tier)), ("Steam Deck", Core.Compat.CompatInfo.DeckLabel(r.Deck)) } : [])],
                 Actions = fixes,
             });
         }

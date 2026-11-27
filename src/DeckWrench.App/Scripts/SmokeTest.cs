@@ -70,7 +70,14 @@ public partial class SmokeTest : Node
         Step("joy-dpad-down", () => Tap(JoyButton.DpadDown), tab: "Games");
         Step("joy-dpad-up", () => Tap(JoyButton.DpadUp), expect: "ELDEN RING:", tab: "Games");
         Step("game-page", () => Tap(JoyButton.A), wait: 1.2, expect: "Proton: GE-Proton9-20");
-        Step("game-page-parity", () => _controllerActions = ActionIds());
+        Step("game-page-parity", () =>
+        {
+            _controllerActions = ActionIds();
+            // Ratings from the stand-in ProtonDB and Steam endpoints, and the next Proton to try.
+            Check(Descendants(GetTree().Root).OfType<Label>().Any(l => l.IsVisibleInTree() && l.Text.Contains("Gold · 2140 reports")), "no ProtonDB tier on the game page");
+            Check(Descendants(GetTree().Root).OfType<Label>().Any(l => l.IsVisibleInTree() && l.Text.StartsWith("Playable", StringComparison.Ordinal)), "no Steam Deck rating on the game page");
+            Check(ActionButton(ActionId.TryOtherProton)?.Text == "Try Proton - Experimental", "no Try Proton - Experimental");
+        });
         // Per-game compatibility tool: pick Proton Experimental; Steam is closed, so it's written straight away.
         Step("compat-pick", () => Tap(JoyButton.A), expect: "GE-Proton9-20");
         Step("compat-pick-experimental", () => Focusable("Proton - Experimental")?.GrabFocus(), expect: "Proton - Experimental");

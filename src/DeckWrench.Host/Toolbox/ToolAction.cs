@@ -14,6 +14,7 @@ public enum ActionId
 
     // Games
     SetCompatTool,
+    TryOtherProton,
     EditLaunchOptions,
     CopyLaunchOptions,
     LaunchPresets,

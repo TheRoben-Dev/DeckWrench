@@ -3,6 +3,12 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.13.0
+
+- A Steam game's page shows its ProtonDB tier (with how many reports, and where recent ones are heading) and Valve's Steam Deck rating with Valve's notes ("Some text is small and hard to read"). They're fetched in the background, kept for a few days, and can be turned off in Settings → Scanning (only the games' app ids are sent).
+- "Try Proton - Experimental" / "Try GE-Proton…": one press switches a game to the usual next Proton to try (the newest GE-Proton for a game on Valve's Proton, Experimental for one on GE). Home offers it for games that crash or are set to a Proton that's missing.
+- A game's page lists what to try, in order, when it won't start or crashes.
+
 ## 0.12.0
 
 - New Home page, first in both layouts: a checkup after every scan that lists what needs your attention, worst first. Games set to a Proton that isn't installed, crashes and missing DLLs in Proton logs (the runtimes that fix them come already ticked), drives that are nearly full, space that can be freed, prefixes with no backup, and Steam changes waiting for a restart. Each one opens with the action that deals with it.

@@ -1,4 +1,5 @@
 using DeckWrench.Core;
+using DeckWrench.Core.Compat;
 using DeckWrench.Core.Detection;
 using DeckWrench.Core.Logs;
 using DeckWrench.Core.Prefixes;
@@ -84,6 +85,16 @@ public sealed class GamesSection : Section
         if (g.IsSteam)
         {
             facts.Add(new("Played", PlayStats.Describe(g, DateTime.UtcNow), g.LastPlayed == null ? Tone.Dim : Tone.Normal));
+            if (Host.Compat.Get(g.AppId) is { } r)
+            {
+                facts.Add(new("ProtonDB", RatingText(r), r.Tier switch { "platinum" or "gold" or "native" => Tone.Good, "silver" or "bronze" => Tone.Warn, "borked" => Tone.Bad, _ => Tone.Dim }));
+                facts.Add(new("Steam Deck", CompatInfo.DeckLabel(r.Deck) + (r.DeckNotes.Count > 0 ? " · " + string.Join(" · ", r.DeckNotes.Take(3)) : ""),
+                    r.Deck switch { DeckRating.Verified => Tone.Good, DeckRating.Playable => Tone.Warn, DeckRating.Unsupported => Tone.Bad, _ => Tone.Dim }));
+            }
+            else if (!Host.Settings.OnlineRatings)
+            {
+                facts.Add(new("Ratings", "Off (Settings → Scanning)", Tone.Dim));
+            }
         }
         if (g.RunsInSteam)
         {
@@ -111,6 +122,40 @@ public sealed class GamesSection : Section
             facts.Add(new("Prefix backups", backups.ToString()));
         }
         return facts;
+    }
+
+    public static string RatingText(CompatInfo r) =>
+        r.Tier == null ? "No reports yet"
+        : CompatInfo.TierLabel(r.Tier) + (r.Reports > 0 ? $" · {r.Reports} report{(r.Reports == 1 ? "" : "s")}" : "")
+          + (r.Trending != null && r.Trending != r.Tier ? $" · trending {CompatInfo.TierLabel(r.Trending)}" : "");
+
+    public override string Notes(object item)
+    {
+        var g = (GameEntry)item;
+        if (!g.RunsInSteam || Platform.IsWindows)
+        {
+            return "";
+        }
+        var next = Actions.NextProtonToTry(S, g);
+        var steps = new List<string>();
+        if (next != null)
+        {
+            steps.Add($"Try {next.DisplayName}");
+        }
+        steps.Add(g.Log == null ? "Turn Proton logging on, run the game once, then look at Home: it reads the log for you" : "Look at Home: it reads this game's Proton log for you");
+        if (g.ShaderCache != null)
+        {
+            steps.Add("Clear the shader cache");
+        }
+        if (g.IsSteam)
+        {
+            steps.Add("Verify game files");
+        }
+        if (g.Prefix != null)
+        {
+            steps.Add("Reset the prefix (it's backed up first)");
+        }
+        return "Won't start or crashes? Try these in order:\n" + string.Join("\n", steps.Select((x, i) => $"{i + 1}. {x}"));
     }
 
     public override IReadOnlyList<ToolAction> ActionsFor(object item) => Host.Actions.ForGame((GameEntry)item);

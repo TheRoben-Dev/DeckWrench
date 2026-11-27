@@ -385,4 +385,18 @@ public class ToolboxScanTests : IDisposable
         Assert.Equal("MSVCP140.dll is missing", Checkup.Short("MSVCP140.dll is missing: install the Visual C++ 2015-2022 runtime into the prefix."));
         Assert.Equal("The game crashed", Checkup.Short("The game crashed (unhandled exception). Try another Proton version."));
     }
+
+    [LinuxFact]
+    public void NextProtonToTryIsGeForValveAndExperimentalForGe()
+    {
+        var host = Host();
+        var s = host.State;
+        var elden = s.Games.Single(g => g.AppId == "1245620");          // on GE-Proton9-20
+        Assert.True(Actions.NextProtonToTry(s, elden)!.IsExperimental);
+        var hades = s.Games.Single(g => g.Title == "Hades");              // on Valve's Proton 9.0 (Beta)
+        Assert.True(Actions.NextProtonToTry(s, hades)!.IsGe);
+        var tryIt = host.Actions.ForGame(hades).Single(a => a.Id == ActionId.TryOtherProton);
+        Assert.Null(tryIt.Unavailable);
+        Assert.StartsWith("Try GE-Proton", tryIt.Label, StringComparison.Ordinal);
+    }
 }

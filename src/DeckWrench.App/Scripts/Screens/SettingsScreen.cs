@@ -62,6 +62,17 @@ public partial class SettingsScreen : TwoPaneScreen
         {
             col.AddChild(UiTheme.Label("•  " + lib, UiTheme.SmallSize + 1, UiTheme.Text, wrap: true));
         }
+        col.AddChild(Section("Ratings"));
+        Add(Toggle.Create("ProtonDB and Steam Deck ratings", Host.Settings.OnlineRatings,
+            on =>
+            {
+                Host.SaveSettings(Host.Settings with { OnlineRatings = on });
+                if (on)
+                {
+                    App.RefreshRatings();
+                }
+            },
+            "Shows each Steam game's ProtonDB tier and Valve's Deck rating on its page. Sends the games' app ids (nothing else) to protondb.com and store.steampowered.com, at most every few days."));
         var running = DeckWrench.Core.Steam.SteamShortcuts.SteamRunning(Host.Paths.Home);
         col.AddChild(Section("Steam"));
         col.AddChild(UiTheme.Label(running

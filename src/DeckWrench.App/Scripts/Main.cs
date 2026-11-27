@@ -349,6 +349,29 @@ public partial class Main : Control
             Scanning = false;
         }
         Shell?.StateChanged();
+        RefreshRatings();
+    }
+
+    /// <summary>Fetches missing or old ProtonDB / Steam Deck ratings in the background; refreshes the screen when any changed.</summary>
+    public async void RefreshRatings()
+    {
+        if (Host == null)
+        {
+            return;
+        }
+        var host = Host;
+        try
+        {
+            var changed = await Task.Run(() => host.RefreshRatings());
+            if (changed > 0 && !Scanning)
+            {
+                Shell?.StateChanged();
+            }
+        }
+        catch (Exception e) when (IsUserFacing(e))
+        {
+            AppLog.Info("ratings: " + e.Message);  // offline is normal on a Deck; never bother the player
+        }
     }
 
     /// <summary>
